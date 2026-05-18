@@ -1,0 +1,17 @@
+PassengerAppRoot /home/u706448493/domains/cardapio.sbs/public_html
+PassengerAppType node
+PassengerNodejs /opt/alt/alt-nodejs20/root/bin/node
+PassengerStartupFile server.js
+PassengerBaseURI /
+PassengerRestartDir /home/u706448493/domains/cardapio.sbs/public_html/tmp
+SetEnv NODE_OPTIONS "--require /home/u706448493/domains/cardapio.sbs/public_html/.builds/config/preload-timestamp.js"
+SetEnv LSNODE_CONSOLE_LOG console.log
+SetEnv NODE_PATH /home/u706448493/domains/cardapio.sbs/nodejs/node_modules:/home/u706448493/domains/cardapio.sbs/public_html/node_modules
+SetEnv APP_URL "https://cardapio.sbs"
+RewriteRule ^\.builds - [F,L]
+
+# SPA fallback
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_URI} !^/api/
+RewriteRule . /index.html [L]

@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BR Service - Plataforma de Programação</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+body { background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+.container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+
+/* Auth */
+.auth-page { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+.auth-box { background: #1e293b; padding: 40px; border-radius: 16px; width: 100%; max-width: 420px; box-shadow: 0 25px 50px rgba(0,0,0,.5); }
+.auth-box h1 { text-align: center; margin-bottom: 8px; font-size: 28px; color: #38bdf8; }
+.auth-box .subtitle { text-align: center; color: #94a3b8; margin-bottom: 28px; font-size: 14px; }
+.form-group { margin-bottom: 18px; }
+.form-group label { display: block; margin-bottom: 6px; font-size: 13px; color: #94a3b8; }
+.form-group input, .form-group select, .form-group textarea { width: 100%; padding: 11px 14px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #e2e8f0; font-size: 14px; outline: none; transition: .2s; }
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: #38bdf8; }
+.form-group select { cursor: pointer; }
+.form-group textarea { resize: vertical; min-height: 80px; }
+.btn { padding: 11px 24px; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; transition: .2s; }
+.btn-primary { background: #38bdf8; color: #0f172a; width: 100%; }
+.btn-primary:hover { background: #7dd3fc; }
+.btn-success { background: #10b981; color: #fff; }
+.btn-success:hover { background: #34d399; }
+.btn-danger { background: #ef4444; color: #fff; }
+.btn-danger:hover { background: #f87171; }
+.btn-outline { background: transparent; border: 1px solid #334155; color: #e2e8f0; }
+.btn-outline:hover { background: #1e293b; }
+.btn-sm { padding: 7px 14px; font-size: 13px; }
+.auth-link { text-align: center; margin-top: 18px; font-size: 13px; color: #94a3b8; }
+.auth-link a { color: #38bdf8; text-decoration: none; cursor: pointer; }
+.auth-link a:hover { text-decoration: underline; }
+.error-msg { background: #7f1d1d; color: #fca5a5; padding: 10px; border-radius: 8px; font-size: 13px; margin-bottom: 16px; display: none; }
+.error-msg.show { display: block; }
+.success-msg { background: #064e3b; color: #6ee7b7; padding: 10px; border-radius: 8px; font-size: 13px; margin-bottom: 16px; display: none; }
+.success-msg.show { display: block; }
+
+/* Header */
+.header { background: #1e293b; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; }
+.header h2 { color: #38bdf8; font-size: 20px; }
+.header .user-info { display: flex; align-items: center; gap: 16px; }
+.header .user-info span { font-size: 14px; color: #94a3b8; }
+.header .user-info .badge { background: #38bdf8; color: #0f172a; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+
+/* Dashboard */
+.dashboard { display: none; }
+.dashboard.active { display: block; }
+.tabs { display: flex; gap: 8px; margin: 24px 0; border-bottom: 1px solid #334155; padding-bottom: 12px; flex-wrap: wrap; }
+.tab-btn { padding: 8px 20px; border: none; background: transparent; color: #94a3b8; cursor: pointer; font-size: 14px; border-radius: 8px; transition: .2s; }
+.tab-btn:hover { background: #1e293b; color: #e2e8f0; }
+.tab-btn.active { background: #38bdf8; color: #0f172a; font-weight: 600; }
+
+/* Cards */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; }
+.card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 20px; transition: .2s; }
+.card:hover { border-color: #38bdf8; }
+.card h3 { font-size: 17px; margin-bottom: 8px; color: #f1f5f9; }
+.card .description { font-size: 13px; color: #94a3b8; margin-bottom: 12px; line-height: 1.5; }
+.card .meta { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; color: #64748b; margin-bottom: 14px; }
+.card .meta span { display: flex; align-items: center; gap: 4px; }
+.card .meta .tag { background: #0f172a; padding: 2px 8px; border-radius: 4px; color: #38bdf8; }
+.card .status { font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 12px; display: inline-block; margin-bottom: 12px; }
+.status-open { background: #1e3a5f; color: #60a5fa; }
+.status-progress { background: #5b2e0e; color: #fbbf24; }
+.status-done { background: #064e3b; color: #34d399; }
+.card-actions { display: flex; gap: 8px; margin-top: 12px; }
+
+/* Create form */
+.create-section { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 24px; margin-bottom: 24px; }
+.create-section h3 { margin-bottom: 16px; color: #38bdf8; }
+
+/* Empty state */
+.empty { text-align: center; padding: 60px 20px; color: #64748b; }
+.empty h3 { font-size: 18px; margin-bottom: 8px; }
+.empty p { font-size: 14px; }
+
+/* Toast */
+.toast { position: fixed; bottom: 24px; right: 24px; background: #10b981; color: #fff; padding: 14px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; transform: translateY(100px); opacity: 0; transition: .4s; z-index: 999; }
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast.error { background: #ef4444; }
+
+/* Responsive */
+@media (max-width: 600px) {
+  .auth-box { padding: 24px; margin: 16px; }
+  .grid { grid-template-columns: 1fr; }
+  .header { flex-direction: column; gap: 10px; text-align: center; }
+}
+</style>
+</head>
+<body>
+
+<!-- ==================== AUTH ==================== -->
+<div id="authPage" class="auth-page">
+  <div class="auth-box">
+    <h1>BR Service</h1>
+    <p class="subtitle">Conectando clientes e profissionais</p>
+
+    <div id="authError" class="error-msg"></div>
+    <div id="authSuccess" class="success-msg"></div>
+
+    <!-- Login Form -->
+    <div id="loginForm">
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="loginEmail" placeholder="seu@email.com">
+      </div>
+      <div class="form-group">
+        <label>Senha</label>
+        <input type="password" id="loginPassword" placeholder="••••••••">
+      </div>
+      <button class="btn btn-primary" onclick="login()">Entrar</button>
+      <div class="auth-link" style="margin-top:10px;"><a onclick="showForgotPassword()">Esqueci minha senha</a></div>
+      <div class="auth-link">Não tem conta? <a onclick="showRegister()">Cadastre-se</a></div>
+    </div>
+
+    <!-- Forgot Password Form -->
+    <div id="forgotForm" style="display:none">
+      <div class="form-group">
+        <label>Email cadastrado</label>
+        <input type="email" id="forgotEmail" placeholder="seu@email.com">
+      </div>
+      <button class="btn btn-primary" onclick="forgotPassword()">Enviar link de recuperação</button>
+      <div class="auth-link"><a onclick="showLogin()">Voltar ao login</a></div>
+    </div>
+
+    <!-- Reset Password Form -->
+    <div id="resetForm" style="display:none">
+      <div class="form-group">
+        <label>Nova senha</label>
+        <input type="password" id="resetPassword" placeholder="••••••••">
+      </div>
+      <div class="form-group">
+        <label>Confirme a nova senha</label>
+        <input type="password" id="resetConfirm" placeholder="••••••••">
+      </div>
+      <button class="btn btn-primary" onclick="resetPassword()">Redefinir senha</button>
+      <div class="auth-link"><a onclick="showLogin()">Voltar ao login</a></div>
+    </div>
+
+    <!-- Register Form -->
+    <div id="registerForm" style="display:none">
+      <div class="form-group">
+        <label>Nome completo</label>
+        <input type="text" id="regName" placeholder="Seu nome">
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="regEmail" placeholder="seu@email.com">
+      </div>
+      <div class="form-group">
+        <label>Senha</label>
+        <input type="password" id="regPassword" placeholder="••••••••">
+      </div>
+      <div class="form-group">
+        <label>Confirme a senha</label>
+        <input type="password" id="regConfirm" placeholder="••••••••">
+      </div>
+      <div class="form-group">
+        <label>WhatsApp</label>
+        <input type="text" id="regWhatsapp" placeholder="(81) 99114-6098">
+      </div>
+      <div class="form-group">
+        <label>Tipo de conta</label>
+        <select id="regRole">
+          <option value="cliente">Cliente - Quero contratar</option>
+          <option value="profissional">Profissional - Quero trabalhar</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" onclick="register()">Criar conta</button>
+      <div class="auth-link">Já tem conta? <a onclick="showLogin()">Fazer login</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== DASHBOARD ==================== -->
+<div id="dashboard" class="dashboard">
+
+  <!-- Header -->
+  <div class="header">
+    <h2>BR Service</h2>
+    <div class="user-info">
+      <span id="userName"></span>
+      <span class="badge" id="userRole"></span>
+      <a href="https://wa.me/5581991146098" target="_blank" class="btn btn-success btn-sm" style="text-decoration:none;">Suporte</a>
+      <button class="btn btn-danger btn-sm" onclick="logout()">Sair</button>
+    </div>
+  </div>
+
+  <div class="container">
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="tasks" onclick="switchTab('tasks')">Tarefas</button>
+      <button class="tab-btn" data-tab="create" id="createTabBtn" onclick="switchTab('create')">Criar Tarefa</button>
+      <button class="tab-btn" data-tab="my" onclick="switchTab('my')">Minhas Tarefas</button>
+      <button class="tab-btn" data-tab="admin" id="adminTabBtn" style="display:none" onclick="switchTab('admin')">Painel Admin</button>
+    </div>
+
+    <!-- Tab: All Tasks -->
+    <div id="tab-tasks" class="tab-content">
+      <div id="tasksGrid" class="grid"></div>
+    </div>
+
+    <!-- Tab: Create Task (client only) -->
+    <div id="tab-create" class="tab-content" style="display:none">
+      <div class="create-section">
+        <h3>Nova tarefa de programação</h3>
+        <div class="form-group">
+          <label>Título da tarefa</label>
+          <input type="text" id="taskTitle" placeholder="Ex: Criar API REST em Node.js">
+        </div>
+        <div class="form-group">
+          <label>Descrição detalhada</label>
+          <textarea id="taskDesc" placeholder="Descreva o que precisa ser feito, tecnologias desejadas, prazos, etc."></textarea>
+        </div>
+        <div class="form-group">
+          <label>Orçamento (R$)</label>
+          <input type="number" id="taskBudget" placeholder="Ex: 500">
+        </div>
+        <button class="btn btn-success" onclick="createTask()">Publicar tarefa</button>
+      </div>
+    </div>
+
+    <!-- Tab: My Tasks -->
+    <div id="tab-my" class="tab-content" style="display:none">
+      <div id="myTasksGrid" class="grid"></div>
+    </div>
+
+    <!-- Tab: Admin Panel -->
+    <div id="tab-admin" class="tab-content" style="display:none">
+      <div style="display:flex; gap:16px; flex-wrap:wrap; margin-bottom:24px;">
+        <div style="background:#1e293b; border:1px solid #334155; border-radius:12px; padding:20px; flex:1; min-width:160px; text-align:center;">
+          <div style="font-size:13px; color:#94a3b8;">Total de Tarefas</div>
+          <div id="adminTotalTasks" style="font-size:32px; font-weight:700; color:#38bdf8; margin-top:4px;">0</div>
+        </div>
+        <div style="background:#1e293b; border:1px solid #334155; border-radius:12px; padding:20px; flex:1; min-width:160px; text-align:center;">
+          <div style="font-size:13px; color:#94a3b8;">Em Andamento</div>
+          <div id="adminProgressTasks" style="font-size:32px; font-weight:700; color:#fbbf24; margin-top:4px;">0</div>
+        </div>
+        <div style="background:#1e293b; border:1px solid #334155; border-radius:12px; padding:20px; flex:1; min-width:160px; text-align:center;">
+          <div style="font-size:13px; color:#94a3b8;">Concluídas</div>
+          <div id="adminDoneTasks" style="font-size:32px; font-weight:700; color:#34d399; margin-top:4px;">0</div>
+        </div>
+        <div style="background:#1e293b; border:1px solid #334155; border-radius:12px; padding:20px; flex:1; min-width:160px; text-align:center;">
+          <div style="font-size:13px; color:#94a3b8;">Usuários</div>
+          <div id="adminTotalUsers" style="font-size:32px; font-weight:700; color:#a78bfa; margin-top:4px;">0</div>
+        </div>
+      </div>
+      <div id="adminTasksGrid" class="grid"></div>
+
+      <h3 style="color:#38bdf8; margin: 32px 0 16px;">Usuários Cadastrados</h3>
+      <div style="overflow-x:auto;">
+        <table style="width:100%; border-collapse:collapse; font-size:13px;">
+          <thead>
+            <tr style="background:#1e293b; border-bottom:2px solid #334155;">
+              <th style="padding:12px 16px; text-align:left; color:#94a3b8;">Nome</th>
+              <th style="padding:12px 16px; text-align:left; color:#94a3b8;">Email</th>
+              <th style="padding:12px 16px; text-align:left; color:#94a3b8;">WhatsApp</th>
+              <th style="padding:12px 16px; text-align:left; color:#94a3b8;">Tipo</th>
+            </tr>
+          </thead>
+          <tbody id="adminUsersBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="toast"></div>
+
+<script>
+const API = '/api';
+
+// =========================== SESSION ===========================
+function getSession() { return JSON.parse(localStorage.getItem('cf_session') || 'null'); }
+function setSession(s) { localStorage.setItem('cf_session', JSON.stringify(s)); }
+function clearSession() { localStorage.removeItem('cf_session'); }
+
+// =========================== AUTH ===========================
+function showRegister() {
+  document.getElementById('loginForm').style.display = 'none';
+  document.getElementById('registerForm').style.display = 'block';
+  document.getElementById('forgotForm').style.display = 'none';
+  document.getElementById('resetForm').style.display = 'none';
+  hideMessages();
+}
+function showLogin() {
+  document.getElementById('loginForm').style.display = 'block';
+  document.getElementById('registerForm').style.display = 'none';
+  document.getElementById('forgotForm').style.display = 'none';
+  document.getElementById('resetForm').style.display = 'none';
+  hideMessages();
+}
+function hideMessages() {
+  document.getElementById('authError').classList.remove('show');
+  document.getElementById('authSuccess').classList.remove('show');
+}
+function showError(msg) {
+  const el = document.getElementById('authError');
+  el.textContent = msg; el.classList.add('show');
+}
+function showSuccess(msg) {
+  const el = document.getElementById('authSuccess');
+  el.textContent = msg; el.classList.add('show');
+}
+
+async function register() {
+  hideMessages();
+  const name = document.getElementById('regName').value.trim();
+  const email = document.getElementById('regEmail').value.trim();
+  const pass = document.getElementById('regPassword').value;
+  const confirm = document.getElementById('regConfirm').value;
+  const whatsapp = document.getElementById('regWhatsapp').value.trim();
+  const role = document.getElementById('regRole').value;
+
+  if (!name || !email || !pass || !confirm) return showError('Preencha todos os campos.');
+  if (!whatsapp) return showError('Informe seu WhatsApp para contato.');
+  if (pass.length < 4) return showError('A senha deve ter pelo menos 4 caracteres.');
+  if (pass !== confirm) return showError('As senhas não conferem.');
+
+  try {
+    const res = await fetch(`${API}/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, password: pass, role, whatsapp })
+    });
+    const data = await res.json();
+    if (!res.ok) return showError(data.error);
+
+    showSuccess('Conta criada com sucesso! Faça login.');
+    document.getElementById('regName').value = '';
+    document.getElementById('regEmail').value = '';
+    document.getElementById('regPassword').value = '';
+    document.getElementById('regConfirm').value = '';
+    document.getElementById('regWhatsapp').value = '';
+    showLogin();
+  } catch (e) {
+    showError('Erro de conexão com o servidor.');
+  }
+}
+
+async function login() {
+  hideMessages();
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass = document.getElementById('loginPassword').value;
+
+  if (!email || !pass) return showError('Preencha email e senha.');
+
+  try {
+    const res = await fetch(`${API}/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: pass })
+    });
+    const data = await res.json();
+    if (!res.ok) return showError(data.error);
+
+    setSession({ userId: data.id, name: data.name, email: data.email, role: data.role, whatsapp: data.whatsapp });
+    enterDashboard();
+  } catch (e) {
+    showError('Erro de conexão com o servidor.');
+  }
+}
+
+// =========================== PASSWORD RESET ===========================
+function showForgotPassword() {
+  document.getElementById('loginForm').style.display = 'none';
+  document.getElementById('registerForm').style.display = 'none';
+  document.getElementById('forgotForm').style.display = 'block';
+  document.getElementById('resetForm').style.display = 'none';
+  hideMessages();
+}
+
+function showResetPassword() {
+  document.getElementById('loginForm').style.display = 'none';
+  document.getElementById('registerForm').style.display = 'none';
+  document.getElementById('forgotForm').style.display = 'none';
+  document.getElementById('resetForm').style.display = 'block';
+  hideMessages();
+}
+
+async function forgotPassword() {
+  hideMessages();
+  const email = document.getElementById('forgotEmail').value.trim();
+  if (!email) return showError('Informe seu email.');
+
+  try {
+    const res = await fetch(`${API}/forgot-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    const data = await res.json();
+    if (!res.ok) return showError(data.error);
+    showSuccess(data.message);
+  } catch (e) {
+    showError('Erro de conexão com o servidor.');
+  }
+}
+
+async function resetPassword() {
+  hideMessages();
+  const pass = document.getElementById('resetPassword').value;
+  const confirm = document.getElementById('resetConfirm').value;
+  const token = new URLSearchParams(window.location.search).get('reset-token');
+
+  if (!pass || !confirm) return showError('Preencha todos os campos.');
+  if (pass.length < 4) return showError('A senha deve ter pelo menos 4 caracteres.');
+  if (pass !== confirm) return showError('As senhas não conferem.');
+  if (!token) return showError('Token de recuperação não encontrado.');
+
+  try {
+    const res = await fetch(`${API}/reset-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, password: pass })
+    });
+    const data = await res.json();
+    if (!res.ok) return showError(data.error);
+    showSuccess(data.message);
+    document.getElementById('resetPassword').value = '';
+    document.getElementById('resetConfirm').value = '';
+    showLogin();
+    // Clean URL
+    window.history.replaceState({}, document.title, window.location.pathname);
+  } catch (e) {
+    showError('Erro de conexão com o servidor.');
+  }
+}
+
+function logout() {
+  clearSession();
+  document.getElementById('dashboard').classList.remove('active');
+  document.getElementById('authPage').style.display = 'flex';
+  document.getElementById('loginEmail').value = '';
+  document.getElementById('loginPassword').value = '';
+}
+
+function checkSession() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.has('reset-token')) {
+    showResetPassword();
+    return;
+  }
+  const s = getSession();
+  if (s) enterDashboard();
+}
+checkSession();
+
+// =========================== DASHBOARD ===========================
+function enterDashboard() {
+  const s = getSession();
+  if (!s) return;
+  document.getElementById('authPage').style.display = 'none';
+  document.getElementById('dashboard').classList.add('active');
+  document.getElementById('userName').textContent = s.name;
+
+  const badge = document.getElementById('userRole');
+  const createBtn = document.getElementById('createTabBtn');
+  const adminTab = document.getElementById('adminTabBtn');
+
+  if (s.role === 'admin') {
+    badge.textContent = 'Administrador';
+    badge.style.background = '#8b5cf6';
+    createBtn.style.display = 'none';
+    adminTab.style.display = 'inline-block';
+    switchTab('admin');
+    return;
+  }
+
+  adminTab.style.display = 'none';
+  const roleLabel = s.role === 'cliente' ? 'Cliente' : 'Profissional';
+  badge.textContent = roleLabel;
+  badge.style.background = s.role === 'cliente' ? '#38bdf8' : '#10b981';
+
+  createBtn.style.display = s.role === 'cliente' ? 'inline-block' : 'none';
+
+  renderAllTasks();
+  renderMyTasks();
+}
+
+// =========================== TABS ===========================
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`.tab-btn[data-tab="${name}"]`).classList.add('active');
+  document.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
+  document.getElementById(`tab-${name}`).style.display = 'block';
+  if (name === 'tasks') renderAllTasks();
+  if (name === 'my') renderMyTasks();
+  if (name === 'admin') renderAdminPanel();
+}
+
+// =========================== TASKS ===========================
+async function createTask() {
+  const s = getSession();
+  if (!s || s.role !== 'cliente') return showToast('Apenas clientes podem criar tarefas.', true);
+
+  const title = document.getElementById('taskTitle').value.trim();
+  const desc = document.getElementById('taskDesc').value.trim();
+  const budget = document.getElementById('taskBudget').value;
+
+  if (!title || !desc || !budget) return showToast('Preencha todos os campos.', true);
+
+  try {
+    const res = await fetch(`${API}/tasks`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, description: desc, budget: parseFloat(budget), clientId: s.userId, clientName: s.name })
+    });
+    if (!res.ok) return showToast('Erro ao criar tarefa.', true);
+
+    document.getElementById('taskTitle').value = '';
+    document.getElementById('taskDesc').value = '';
+    document.getElementById('taskBudget').value = '';
+
+    showToast('Tarefa publicada com sucesso!');
+    renderAllTasks();
+    renderMyTasks();
+  } catch (e) {
+    showToast('Erro de conexão.', true);
+  }
+}
+
+async function acceptTask(id) {
+  const s = getSession();
+  if (!s || s.role !== 'profissional') return showToast('Apenas profissionais podem aceitar tarefas.', true);
+
+  try {
+    const res = await fetch(`${API}/tasks/${id}/accept`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ professionalId: s.userId, professionalName: s.name })
+    });
+    const data = await res.json();
+    if (!res.ok) return showToast(data.error || 'Erro ao aceitar.', true);
+
+    showToast('Tarefa aceita!');
+    renderAllTasks();
+    renderMyTasks();
+  } catch (e) {
+    showToast('Erro de conexão.', true);
+  }
+}
+
+async function completeTask(id) {
+  const s = getSession();
+  try {
+    const res = await fetch(`${API}/tasks/${id}/complete`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clientId: s.userId })
+    });
+    const data = await res.json();
+    if (!res.ok) return showToast(data.error || 'Erro ao concluir.', true);
+
+    showToast('Tarefa concluída com sucesso!');
+    renderAllTasks();
+    renderMyTasks();
+
+    const msg = encodeURIComponent(`Atividade concluída!\nCliente: ${s.name}\nWhatsApp: ${s.whatsapp || 'não informado'}`);
+    window.open(`https://wa.me/5581991146098?text=${msg}`, '_blank');
+  } catch (e) {
+    showToast('Erro de conexão.', true);
+  }
+}
+
+// =========================== RENDER ===========================
+let cachedTasks = [];
+let cachedUsers = [];
+
+async function loadTasks() {
+  try {
+    const res = await fetch(`${API}/tasks`);
+    cachedTasks = await res.json();
+  } catch { cachedTasks = []; }
+}
+
+async function loadUsers() {
+  try {
+    const res = await fetch(`${API}/users`);
+    cachedUsers = await res.json();
+  } catch { cachedUsers = []; }
+}
+
+async function renderAllTasks() {
+  await loadTasks();
+  const s = getSession();
+  const grid = document.getElementById('tasksGrid');
+
+  const visible = cachedTasks.filter(t => {
+    if (s.role === 'admin') return true;
+    if (s.role === 'cliente') return t.clientId === s.userId || t.status === 'open';
+    return true;
+  });
+
+  if (visible.length === 0) {
+    grid.innerHTML = `<div class="empty"><h3>Nenhuma tarefa disponível</h3><p>Volte mais tarde para ver novas oportunidades.</p></div>`;
+    return;
+  }
+
+  grid.innerHTML = visible.map(t => {
+    const statusLabels = { open: 'Aberta', in_progress: 'Em andamento', completed: 'Concluída' };
+    const statusClasses = { open: 'status-open', in_progress: 'status-progress', completed: 'status-done' };
+
+    let actions = '';
+    if (s.role === 'profissional' && t.status === 'open') {
+      actions = `<button class="btn btn-success btn-sm" onclick="acceptTask(${t.id})">Aceitar tarefa</button>`;
+    }
+    if (s.role === 'cliente' && t.status === 'in_progress' && t.clientId === s.userId) {
+      actions = `<button class="btn btn-success btn-sm" onclick="completeTask(${t.id})">Concluir tarefa</button>`;
+    }
+
+    const assignedTo = t.professionalName ? `<span>👤 Prof: ${escHtml(t.professionalName)}</span>` : '';
+
+    return `
+      <div class="card">
+        <span class="status ${statusClasses[t.status]}">${statusLabels[t.status]}</span>
+        <h3>${escHtml(t.title)}</h3>
+        <div class="description">${escHtml(t.description)}</div>
+        <div class="meta">
+          <span>💰 R$ ${t.budget.toFixed(2)}</span>
+          <span>👤 ${escHtml(t.clientName)}</span>
+          ${assignedTo}
+        </div>
+        ${actions ? `<div class="card-actions">${actions}</div>` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+async function renderMyTasks() {
+  await loadTasks();
+  const s = getSession();
+  const grid = document.getElementById('myTasksGrid');
+
+  const mine = cachedTasks.filter(t =>
+    t.clientId === s.userId || t.professionalId === s.userId
+  );
+
+  if (mine.length === 0) {
+    grid.innerHTML = `<div class="empty"><h3>Nenhuma tarefa sua</h3><p>Suas tarefas aparecerão aqui.</p></div>`;
+    return;
+  }
+
+  const statusLabels = { open: 'Aberta', in_progress: 'Em andamento', completed: 'Concluída' };
+  const statusClasses = { open: 'status-open', in_progress: 'status-progress', completed: 'status-done' };
+
+  grid.innerHTML = mine.map(t => {
+    let actions = '';
+    if (s.role === 'cliente' && t.status === 'in_progress' && t.clientId === s.userId) {
+      actions = `<button class="btn btn-success btn-sm" onclick="completeTask(${t.id})">Concluir tarefa</button>`;
+    }
+
+    const assignedTo = t.professionalName ? `<span>👤 Prof: ${escHtml(t.professionalName)}</span>` : '';
+
+    return `
+      <div class="card">
+        <span class="status ${statusClasses[t.status]}">${statusLabels[t.status]}</span>
+        <h3>${escHtml(t.title)}</h3>
+        <div class="description">${escHtml(t.description)}</div>
+        <div class="meta">
+          <span>💰 R$ ${t.budget.toFixed(2)}</span>
+          ${t.clientId === s.userId ? `<span>👤 Cliente: ${escHtml(t.clientName)}</span>` : assignedTo}
+        </div>
+        ${actions ? `<div class="card-actions">${actions}</div>` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+async function renderAdminPanel() {
+  await Promise.all([loadTasks(), loadUsers()]);
+
+  document.getElementById('adminTotalTasks').textContent = cachedTasks.length;
+  document.getElementById('adminProgressTasks').textContent = cachedTasks.filter(t => t.status === 'in_progress').length;
+  document.getElementById('adminDoneTasks').textContent = cachedTasks.filter(t => t.status === 'completed').length;
+  document.getElementById('adminTotalUsers').textContent = cachedUsers.length;
+
+  const grid = document.getElementById('adminTasksGrid');
+
+  if (cachedTasks.length === 0) {
+    grid.innerHTML = `<div class="empty"><h3>Nenhuma tarefa no sistema</h3></div>`;
+  } else {
+    const statusLabels = { open: 'Aberta', in_progress: 'Em andamento', completed: 'Concluída' };
+    const statusClasses = { open: 'status-open', in_progress: 'status-progress', completed: 'status-done' };
+
+    grid.innerHTML = cachedTasks.map(t => {
+      const assignedTo = t.professionalName ? `<span>👤 Prof: ${escHtml(t.professionalName)}</span>` : '<span style="color:#ef4444;">⏳ Aguardando profissional</span>';
+      return `
+        <div class="card">
+          <span class="status ${statusClasses[t.status]}">${statusLabels[t.status]}</span>
+          <h3>${escHtml(t.title)}</h3>
+          <div class="description">${escHtml(t.description)}</div>
+          <div class="meta">
+            <span>💰 R$ ${t.budget.toFixed(2)}</span>
+            <span>👤 Cliente: ${escHtml(t.clientName)}</span>
+            ${assignedTo}
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  const tbody = document.getElementById('adminUsersBody');
+  if (cachedUsers.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="4" style="padding:24px; text-align:center; color:#64748b;">Nenhum usuário cadastrado.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = cachedUsers.map(u => {
+    const roleLabel = u.role === 'cliente' ? 'Cliente' : 'Profissional';
+    const wpp = u.whatsapp || '-';
+    return `<tr style="border-bottom:1px solid #1e293b;">
+      <td style="padding:12px 16px;">${escHtml(u.name)}</td>
+      <td style="padding:12px 16px;">${escHtml(u.email)}</td>
+      <td style="padding:12px 16px;">${escHtml(wpp)}</td>
+      <td style="padding:12px 16px;"><span class="badge" style="background:${u.role === 'cliente' ? '#38bdf8' : '#10b981'}; color:#0f172a; padding:2px 10px; border-radius:12px; font-size:12px; font-weight:600;">${roleLabel}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+function escHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// =========================== TOAST ===========================
+function showToast(msg, isError) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast' + (isError ? ' error' : '');
+  el.classList.add('show');
+  clearTimeout(el._timer);
+  el._timer = setTimeout(() => el.classList.remove('show'), 3500);
+}
+</script>
+</body>
+</html>
