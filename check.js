@@ -7,8 +7,8 @@ const os = require('os');
   const client = new ftp.Client();
   client.ftp.verbose = false;
   try {
-    await client.access({ host: 'cardapio.sbs', user: 'u706448493.Josimar', password: 'Josimar8821', secure: false });
-    await client.cd('/home/u706448493/domains/cardapio.sbs/public_html');
+    await client.access({ host: 'brservice.com', user: 'u706448493.Josimar', password: 'Josimar8821', secure: false });
+    await client.cd('/home/u706448493/domains/brservice.com/public_html');
 
     // Check root dir too
     const files = await client.list();

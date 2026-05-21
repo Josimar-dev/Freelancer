@@ -1,13 +1,13 @@
-PassengerAppRoot /home/u706448493/domains/cardapio.sbs/public_html
+PassengerAppRoot /home/u706448493/domains/brservice.com/public_html
 PassengerAppType node
 PassengerNodejs /opt/alt/alt-nodejs20/root/bin/node
 PassengerStartupFile server.js
 PassengerBaseURI /
-PassengerRestartDir /home/u706448493/domains/cardapio.sbs/public_html/tmp
-SetEnv NODE_OPTIONS "--require /home/u706448493/domains/cardapio.sbs/public_html/.builds/config/preload-timestamp.js"
+PassengerRestartDir /home/u706448493/domains/brservice.com/public_html/tmp
+SetEnv NODE_OPTIONS "--require /home/u706448493/domains/brservice.com/public_html/.builds/config/preload-timestamp.js"
 SetEnv LSNODE_CONSOLE_LOG console.log
-SetEnv NODE_PATH /home/u706448493/domains/cardapio.sbs/nodejs/node_modules:/home/u706448493/domains/cardapio.sbs/public_html/node_modules
-SetEnv APP_URL "https://cardapio.sbs"
+SetEnv NODE_PATH /home/u706448493/domains/brservice.com/nodejs/node_modules:/home/u706448493/domains/brservice.com/public_html/node_modules
+SetEnv APP_URL "https://brservice.com"
 SetEnv SMTP_HOST "smtp.gmail.com"
 SetEnv SMTP_PORT "587"
 SetEnv SMTP_SECURE "false"

@@ -32,9 +32,9 @@ setImmediate(() => {
   try {
     const fs = require('fs');
     const path = require('path');
-    const src = '/home/u706448493/domains/cardapio.sbs/public_html/server.js';
-    const dst = '/home/u706448493/domains/cardapio.sbs/nodejs/server.js';
-    const restartFile = '/home/u706448493/domains/cardapio.sbs/nodejs/tmp/restart.txt';
+    const src = '/home/u706448493/domains/brservice.com/public_html/server.js';
+    const dst = '/home/u706448493/domains/brservice.com/nodejs/server.js';
+    const restartFile = '/home/u706448493/domains/brservice.com/nodejs/tmp/restart.txt';
     if (fs.existsSync(src)) {
       const srcContent = fs.readFileSync(src, 'utf8');
       let needsUpdate = true;
