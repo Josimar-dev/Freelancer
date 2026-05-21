@@ -3,7 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 
-const FTP_HOST = 'brservice.com';
+const FTP_HOST = 'cardapio.sbs';
 const FTP_USER = 'u706448493.Josimar';
 const FTP_PASS = 'Josimar8821';
 const REMOTE_DIR = '/home/u706448493/domains/brservice.com/public_html';
