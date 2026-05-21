@@ -83,6 +83,18 @@ async function start() {
 
   saveDb();
   console.log('Banco SQLite inicializado.');
+
+  if (transporter) {
+    transporter.verify().then(() => {
+      console.log('✅ SMTP configurado e funcionando.');
+    }).catch(err => {
+      console.error('❌ SMTP configurado mas conexão falhou:', err.message);
+    });
+  } else if (process.env.SMTP_HOST) {
+    console.error('❌ SMTP_HOST definido mas nodemailer não foi carregado.');
+  } else {
+    console.log('ℹ️  SMTP não configurado. E-mails serão apenas logados.');
+  }
 }
 
 function saveDb() {
@@ -172,7 +184,7 @@ function sendEmail(to, subject, html) {
     console.log(`[EMAIL] To: ${to}`);
     console.log(`[EMAIL] Subject: ${subject}`);
     console.log(`[EMAIL] Body: ${html}`);
-    return Promise.resolve();
+    return Promise.reject(new Error('SMTP não configurado.'));
   }
   return transporter.sendMail({
     from: process.env.SMTP_FROM || `"BR Service" <${process.env.SMTP_USER}>`,
@@ -182,7 +194,7 @@ function sendEmail(to, subject, html) {
   });
 }
 
-app.post('/api/forgot-password', (req, res) => {
+app.post('/api/forgot-password', async (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ error: 'Informe seu email.' });
 
@@ -202,16 +214,21 @@ app.post('/api/forgot-password', (req, res) => {
   const resetLink = `${APP_URL}/?reset-token=${token}`;
   const userName = user[0].values[0][1];
 
-  sendEmail(
-    email,
-    'BR Service - Recuperação de Senha',
-    `<p>Olá <strong>${userName}</strong>,</p>
+  try {
+    await sendEmail(
+      email,
+      'BR Service - Recuperação de Senha',
+      `<p>Olá <strong>${userName}</strong>,</p>
 <p>Recebemos uma solicitação de recuperação de senha para sua conta no BR Service.</p>
 <p><a href="${resetLink}" style="display:inline-block;padding:12px 24px;background:#38bdf8;color:#0f172a;text-decoration:none;border-radius:8px;font-weight:bold;">Redefinir Senha</a></p>
 <p>Ou copie o link: <br>${resetLink}</p>
 <p>Este link expira em 1 hora.</p>
 <p>Se você não solicitou esta recuperação, ignore este email.</p>`
-  ).catch(err => console.error('Erro ao enviar email:', err));
+    );
+  } catch (err) {
+    console.error('Erro ao enviar email:', err);
+    return res.status(500).json({ error: 'Erro ao enviar email de recuperação. Verifique a configuração SMTP.' });
+  }
 
   res.json({ message: 'Se o email existir, você receberá um link de recuperação.' });
 });

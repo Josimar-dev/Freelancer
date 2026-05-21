@@ -8,6 +8,12 @@ SetEnv NODE_OPTIONS "--require /home/u706448493/domains/cardapio.sbs/public_html
 SetEnv LSNODE_CONSOLE_LOG console.log
 SetEnv NODE_PATH /home/u706448493/domains/cardapio.sbs/nodejs/node_modules:/home/u706448493/domains/cardapio.sbs/public_html/node_modules
 SetEnv APP_URL "https://cardapio.sbs"
+SetEnv SMTP_HOST "smtp.gmail.com"
+SetEnv SMTP_PORT "587"
+SetEnv SMTP_SECURE "false"
+SetEnv SMTP_USER "josimars187@gmail.com"
+SetEnv SMTP_PASS "mfgv kosf fnyj ftvp"
+SetEnv SMTP_FROM "BR Service <josimars187@gmail.com>"
 RewriteRule ^\.builds - [F,L]
 
 # SPA fallback
