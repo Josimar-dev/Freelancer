@@ -70,6 +70,30 @@ async function start() {
   `);
 
   db.run(`
+    CREATE TABLE IF NOT EXISTS chat_messages (
+      id INTEGER PRIMARY KEY,
+      taskId INTEGER NOT NULL,
+      senderId INTEGER NOT NULL,
+      senderName TEXT NOT NULL,
+      senderRole TEXT NOT NULL,
+      message TEXT NOT NULL,
+      createdAt TEXT DEFAULT (datetime('now'))
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS support_messages (
+      id INTEGER PRIMARY KEY,
+      userId INTEGER NOT NULL,
+      senderId INTEGER NOT NULL,
+      senderName TEXT NOT NULL,
+      senderRole TEXT NOT NULL,
+      message TEXT NOT NULL,
+      createdAt TEXT DEFAULT (datetime('now'))
+    )
+  `);
+
+  db.run(`
     CREATE TABLE IF NOT EXISTS tasks (
       id INTEGER PRIMARY KEY,
       title TEXT NOT NULL,
@@ -121,6 +145,10 @@ function verifyPassword(password, stored) {
     return hash === computedHash;
   }
   return stored === password;
+}
+
+function safeSql(value) {
+  return String(value ?? '').replace(/'/g, "''");
 }
 
 // ======================== USERS ========================
@@ -271,6 +299,244 @@ app.post('/api/reset-password', (req, res) => {
   res.json({ message: 'Senha redefinida com sucesso! Faça login.' });
 });
 
+// ======================== CHAT ========================
+
+app.get('/api/tasks/:id/chat', (req, res) => {
+  const taskId = parseInt(req.params.id);
+  const userId = parseInt(req.query.userId);
+  if (!taskId || !userId) return res.status(400).json({ error: 'Task e usuario sao obrigatorios.' });
+
+  const taskResult = db.exec(`SELECT id, title, clientId, clientName, professionalId, professionalName FROM tasks WHERE id = ${taskId}`);
+  if (!taskResult.length || !taskResult[0].values.length) {
+    return res.status(404).json({ error: 'Tarefa nao encontrada.' });
+  }
+
+  const taskRow = taskResult[0].values[0];
+  const task = {
+    id: taskRow[0],
+    title: taskRow[1],
+    clientId: taskRow[2],
+    clientName: taskRow[3],
+    professionalId: taskRow[4],
+    professionalName: taskRow[5]
+  };
+
+  if (!task.professionalId || !task.clientId) {
+    return res.status(400).json({ error: 'A tarefa ainda nao possui cliente e profissional.' });
+  }
+
+  if (userId !== task.clientId && userId !== task.professionalId) {
+    return res.status(403).json({ error: 'Sem permissao para acessar o chat.' });
+  }
+
+  const messagesResult = db.exec(`
+    SELECT id, senderId, senderName, senderRole, message, createdAt
+    FROM chat_messages
+    WHERE taskId = ${taskId}
+    ORDER BY id ASC
+  `);
+
+  const messages = !messagesResult.length ? [] : messagesResult[0].values.map(v => ({
+    id: v[0],
+    senderId: v[1],
+    senderName: v[2],
+    senderRole: v[3],
+    message: v[4],
+    createdAt: v[5]
+  }));
+
+  res.json({
+    task: {
+      id: task.id,
+      title: task.title,
+      clientName: task.clientName,
+      professionalName: task.professionalName || 'Profissional'
+    },
+    messages
+  });
+});
+
+app.post('/api/tasks/:id/chat', (req, res) => {
+  const taskId = parseInt(req.params.id);
+  const { userId, message } = req.body;
+  if (!taskId || !userId || !message) {
+    return res.status(400).json({ error: 'Mensagem invalida.' });
+  }
+
+  const taskResult = db.exec(`SELECT clientId, professionalId FROM tasks WHERE id = ${taskId}`);
+  if (!taskResult.length || !taskResult[0].values.length) {
+    return res.status(404).json({ error: 'Tarefa nao encontrada.' });
+  }
+
+  const taskClientId = taskResult[0].values[0][0];
+  const taskProfessionalId = taskResult[0].values[0][1];
+  if (!taskProfessionalId || !taskClientId) {
+    return res.status(400).json({ error: 'A tarefa ainda nao possui cliente e profissional.' });
+  }
+
+  if (userId !== taskClientId && userId !== taskProfessionalId) {
+    return res.status(403).json({ error: 'Sem permissao para enviar mensagem.' });
+  }
+
+  const userResult = db.exec(`SELECT id, name, role FROM users WHERE id = ${parseInt(userId)}`);
+  if (!userResult.length || !userResult[0].values.length) {
+    return res.status(403).json({ error: 'Usuario nao encontrado.' });
+  }
+
+  const senderName = userResult[0].values[0][1];
+  const senderRole = userResult[0].values[0][2];
+
+  const safeName = safeSql(senderName);
+  const safeRole = safeSql(senderRole);
+  const safeMessage = safeSql(message);
+
+  const id = Date.now();
+  db.run(`
+    INSERT INTO chat_messages (id, taskId, senderId, senderName, senderRole, message)
+    VALUES (${id}, ${taskId}, ${userId}, '${safeName}', '${safeRole}', '${safeMessage}')
+  `);
+  saveDb();
+
+  res.json({ success: true });
+});
+
+app.get('/api/user-chats', (req, res) => {
+  const userId = parseInt(req.query.userId);
+  if (!userId) return res.status(400).json({ error: 'Usuario obrigatorio.' });
+
+  const tasksResult = db.exec(`
+    SELECT id, title, clientId, clientName, professionalId, professionalName, status
+    FROM tasks
+    WHERE (clientId = ${userId} OR professionalId = ${userId})
+      AND status = 'in_progress'
+      AND professionalId IS NOT NULL
+      AND professionalId != 0
+      AND clientId IS NOT NULL
+      AND clientId != 0
+    ORDER BY id DESC
+  `);
+
+  const chats = [];
+  if (tasksResult.length) {
+    for (const row of tasksResult[0].values) {
+      const taskId = row[0];
+      const title = row[1];
+      const clientId = row[2];
+      const clientName = row[3];
+      const professionalId = row[4];
+      const professionalName = row[5];
+
+      const lastMsgResult = db.exec(`
+        SELECT message, senderName, createdAt FROM chat_messages
+        WHERE taskId = ${taskId}
+        ORDER BY id DESC LIMIT 1
+      `);
+      let lastMessage = null;
+      if (lastMsgResult.length && lastMsgResult[0].values.length) {
+        lastMessage = {
+          message: lastMsgResult[0].values[0][0],
+          senderName: lastMsgResult[0].values[0][1],
+          createdAt: lastMsgResult[0].values[0][2]
+        };
+      }
+
+      const otherName = userId === clientId ? professionalName : clientName;
+
+      chats.push({
+        id: taskId,
+        type: 'task',
+        title,
+        otherName,
+        lastMessage
+      });
+    }
+  }
+
+  res.json(chats);
+});
+
+// ======================== SUPPORT CHAT ========================
+
+app.get('/api/support-chat', (req, res) => {
+  const userId = parseInt(req.query.userId);
+  const viewerId = parseInt(req.query.viewerId);
+  const viewerRole = (req.query.viewerRole || '').toLowerCase();
+
+  if (!userId || !viewerId || !viewerRole) {
+    return res.status(400).json({ error: 'Parametros invalidos.' });
+  }
+
+  if (viewerRole !== 'admin' && viewerId !== userId) {
+    return res.status(403).json({ error: 'Sem permissao para acessar o suporte.' });
+  }
+
+  const userResult = db.exec(`SELECT id, name FROM users WHERE id = ${userId}`);
+  if (!userResult.length || !userResult[0].values.length) {
+    return res.status(404).json({ error: 'Usuario nao encontrado.' });
+  }
+
+  const user = { id: userResult[0].values[0][0], name: userResult[0].values[0][1] };
+
+  const messagesResult = db.exec(`
+    SELECT id, senderId, senderName, senderRole, message, createdAt
+    FROM support_messages
+    WHERE userId = ${userId}
+    ORDER BY id ASC
+  `);
+
+  const messages = !messagesResult.length ? [] : messagesResult[0].values.map(v => ({
+    id: v[0],
+    senderId: v[1],
+    senderName: v[2],
+    senderRole: v[3],
+    message: v[4],
+    createdAt: v[5]
+  }));
+
+  res.json({ user, messages });
+});
+
+app.post('/api/support-chat', (req, res) => {
+  const { userId, senderId, senderRole, message } = req.body;
+  if (!userId || !senderId || !senderRole || !message) {
+    return res.status(400).json({ error: 'Mensagem invalida.' });
+  }
+
+  const safeMessage = safeSql(message);
+  const safeRole = safeSql(senderRole);
+
+  let safeName = 'Suporte';
+  let finalSenderId = parseInt(senderId);
+  let finalSenderRole = safeRole;
+
+  if (String(senderRole).toLowerCase() !== 'admin') {
+    if (parseInt(senderId) !== parseInt(userId)) {
+      return res.status(403).json({ error: 'Sem permissao para enviar mensagem.' });
+    }
+
+    const userResult = db.exec(`SELECT id, name, role FROM users WHERE id = ${parseInt(userId)}`);
+    if (!userResult.length || !userResult[0].values.length) {
+      return res.status(404).json({ error: 'Usuario nao encontrado.' });
+    }
+
+    safeName = safeSql(userResult[0].values[0][1]);
+    finalSenderRole = safeSql(userResult[0].values[0][2]);
+  } else {
+    finalSenderId = 0;
+    finalSenderRole = 'admin';
+    safeName = 'Suporte';
+  }
+
+  const id = Date.now();
+  db.run(`
+    INSERT INTO support_messages (id, userId, senderId, senderName, senderRole, message)
+    VALUES (${id}, ${parseInt(userId)}, ${finalSenderId}, '${safeName}', '${finalSenderRole}', '${safeMessage}')
+  `);
+  saveDb();
+
+  res.json({ success: true });
+});
+
 // ======================== TASKS ========================
 
 app.get('/api/tasks', (req, res) => {
@@ -285,27 +551,98 @@ app.get('/api/tasks', (req, res) => {
 });
 
 app.post('/api/tasks', (req, res) => {
-  const { title, description, budget, clientId, clientName } = req.body;
-  if (!title || !description || !budget || !clientId) {
+  const {
+    title,
+    description,
+    budget,
+    creatorId,
+    creatorName,
+    creatorRole,
+    clientId,
+    clientName,
+    professionalId,
+    professionalName
+  } = req.body;
+
+  const finalTitle = String(title || '').trim();
+  const finalDesc = String(description || '').trim();
+  const finalBudget = Number(budget);
+
+  if (!finalTitle || !finalDesc || Number.isNaN(finalBudget)) {
     return res.status(400).json({ error: 'Preencha todos os campos.' });
   }
 
-  const id = Date.now();
-  const safeTitle = title.replace(/'/g, "''");
-  const safeDesc = description.replace(/'/g, "''");
-  const safeName = clientName.replace(/'/g, "''");
+  let finalCreatorId = creatorId || clientId || professionalId;
+  let finalCreatorName = creatorName || clientName || professionalName;
+  let finalCreatorRole = creatorRole || (professionalId ? 'profissional' : (clientId ? 'cliente' : null));
 
-  db.run(`INSERT INTO tasks (id, title, description, budget, status, clientId, clientName) VALUES (${id}, '${safeTitle}', '${safeDesc}', ${budget}, 'open', ${clientId}, '${safeName}')`);
+  if (!finalCreatorId) {
+    return res.status(400).json({ error: 'Preencha todos os campos.' });
+  }
+
+  if (!finalCreatorRole || !finalCreatorName) {
+    const userResult = db.exec(`SELECT name, role FROM users WHERE id = ${parseInt(finalCreatorId)}`);
+    if (!userResult.length || !userResult[0].values.length) {
+      return res.status(400).json({ error: 'Preencha todos os campos.' });
+    }
+    finalCreatorName = finalCreatorName || userResult[0].values[0][0];
+    finalCreatorRole = finalCreatorRole || userResult[0].values[0][1];
+  }
+
+  const id = Date.now();
+  const safeTitle = safeSql(finalTitle);
+  const safeDesc = safeSql(finalDesc);
+  const safeCreatorName = safeSql(finalCreatorName);
+  const role = String(finalCreatorRole).toLowerCase();
+
+  if (role === 'profissional') {
+    db.run(`
+      INSERT INTO tasks (id, title, description, budget, status, clientId, clientName, professionalId, professionalName)
+      VALUES (${id}, '${safeTitle}', '${safeDesc}', ${finalBudget}, 'open', 0, 'Aguardando cliente', ${parseInt(finalCreatorId)}, '${safeCreatorName}')
+    `);
+    saveDb();
+
+    return res.json({
+      id,
+      title: finalTitle,
+      description: finalDesc,
+      budget: finalBudget,
+      status: 'open',
+      clientId: 0,
+      clientName: 'Aguardando cliente',
+      professionalId: parseInt(finalCreatorId),
+      professionalName: finalCreatorName
+    });
+  }
+
+  if (role !== 'cliente') {
+    return res.status(400).json({ error: 'Perfil inválido para criar tarefa.' });
+  }
+
+  db.run(`
+    INSERT INTO tasks (id, title, description, budget, status, clientId, clientName)
+    VALUES (${id}, '${safeTitle}', '${safeDesc}', ${finalBudget}, 'open', ${parseInt(finalCreatorId)}, '${safeCreatorName}')
+  `);
   saveDb();
 
-  res.json({ id, title, description, budget, status: 'open', clientId, clientName, professionalId: null, professionalName: null });
+  res.json({
+    id,
+    title: finalTitle,
+    description: finalDesc,
+    budget: finalBudget,
+    status: 'open',
+    clientId: parseInt(finalCreatorId),
+    clientName: finalCreatorName,
+    professionalId: null,
+    professionalName: null
+  });
 });
 
 app.put('/api/tasks/:id/accept', (req, res) => {
   const { id } = req.params;
   const { professionalId, professionalName } = req.body;
 
-  const result = db.exec(`SELECT status FROM tasks WHERE id = ${parseInt(id)}`);
+  const result = db.exec(`SELECT status, professionalId FROM tasks WHERE id = ${parseInt(id)}`);
   if (!result.length || !result[0].values.length) {
     return res.status(404).json({ error: 'Tarefa não encontrada.' });
   }
@@ -313,8 +650,52 @@ app.put('/api/tasks/:id/accept', (req, res) => {
     return res.status(400).json({ error: 'Tarefa já foi aceita.' });
   }
 
+  if (result[0].values[0][1]) {
+    return res.status(400).json({ error: 'Tarefa já possui profissional.' });
+  }
+
   const safeName = professionalName.replace(/'/g, "''");
   db.run(`UPDATE tasks SET status = 'in_progress', professionalId = ${professionalId}, professionalName = '${safeName}' WHERE id = ${parseInt(id)}`);
+  saveDb();
+
+  res.json({ success: true });
+});
+
+app.put('/api/tasks/:id/accept-client', (req, res) => {
+  const { id } = req.params;
+  const { clientId, clientName } = req.body;
+
+  if (!clientId || !clientName) {
+    return res.status(400).json({ error: 'Cliente inválido.' });
+  }
+
+  const result = db.exec(`SELECT status, clientId, professionalId FROM tasks WHERE id = ${parseInt(id)}`);
+  if (!result.length || !result[0].values.length) {
+    return res.status(404).json({ error: 'Tarefa não encontrada.' });
+  }
+
+  const status = result[0].values[0][0];
+  const existingClientId = result[0].values[0][1];
+  const professionalId = result[0].values[0][2];
+
+  if (status !== 'open') {
+    return res.status(400).json({ error: 'Tarefa não está aberta.' });
+  }
+
+  if (!professionalId) {
+    return res.status(400).json({ error: 'Tarefa não foi criada por um profissional.' });
+  }
+
+  if (existingClientId && existingClientId !== 0) {
+    return res.status(400).json({ error: 'Tarefa já possui cliente.' });
+  }
+
+  const safeName = safeSql(clientName);
+  db.run(`
+    UPDATE tasks
+    SET status = 'in_progress', clientId = ${clientId}, clientName = '${safeName}'
+    WHERE id = ${parseInt(id)}
+  `);
   saveDb();
 
   res.json({ success: true });
