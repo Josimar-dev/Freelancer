@@ -324,37 +324,90 @@ app.put('/api/tasks/:id/complete', (req, res) => {
   const { id } = req.params;
   const { clientId } = req.body;
 
-  const result = db.exec(`SELECT clientId, status, title FROM tasks WHERE id = ${parseInt(id)}`);
+  const result = db.exec(`SELECT clientId, clientName, status, title, professionalId, professionalName FROM tasks WHERE id = ${parseInt(id)}`);
   if (!result.length || !result[0].values.length) {
     return res.status(404).json({ error: 'Tarefa não encontrada.' });
   }
 
   const row = result[0].values[0];
-  if (row[0] !== clientId) return res.status(403).json({ error: 'Apenas o cliente pode concluir.' });
-  if (row[1] !== 'in_progress') return res.status(400).json({ error: 'Tarefa não está em andamento.' });
-  const taskTitle = row[2];
+  const taskClientId = row[0];
+  const taskClientName = row[1];
+  const taskStatus = row[2];
+  const taskTitle = row[3];
+  const professionalId = row[4];
+  const taskProfessionalName = row[5];
+
+  if (taskClientId !== clientId) return res.status(403).json({ error: 'Apenas o cliente pode concluir.' });
+  if (taskStatus !== 'in_progress') return res.status(400).json({ error: 'Tarefa não está em andamento.' });
 
   db.run(`UPDATE tasks SET status = 'completed' WHERE id = ${parseInt(id)}`);
   saveDb();
 
-  // Notify support
-  const userResult = db.exec(`SELECT name, whatsapp FROM users WHERE id = ${parseInt(clientId)}`);
-  let clientName = clientId;
+  // Notify support, client, and professional
+  const clientResult = db.exec(`SELECT name, whatsapp, email FROM users WHERE id = ${parseInt(clientId)}`);
+  let clientName = taskClientName || clientId;
   let clientWpp = 'não informado';
-  if (userResult.length && userResult[0].values.length) {
-    clientName = userResult[0].values[0][0];
-    clientWpp = userResult[0].values[0][1] || 'não informado';
+  let clientEmail = '';
+  if (clientResult.length && clientResult[0].values.length) {
+    clientName = clientResult[0].values[0][0];
+    clientWpp = clientResult[0].values[0][1] || 'não informado';
+    clientEmail = clientResult[0].values[0][2] || '';
+  }
+
+  const hasProfessional = professionalId !== null && professionalId !== undefined;
+  let professionalName = taskProfessionalName || 'Profissional';
+  let professionalEmail = '';
+  let professionalWpp = 'não informado';
+  if (hasProfessional) {
+    const profResult = db.exec(`SELECT name, whatsapp, email FROM users WHERE id = ${parseInt(professionalId)}`);
+    if (profResult.length && profResult[0].values.length) {
+      professionalName = profResult[0].values[0][0];
+      professionalWpp = profResult[0].values[0][1] || 'não informado';
+      professionalEmail = profResult[0].values[0][2] || '';
+    }
   }
 
   const supportEmail = process.env.SUPPORT_EMAIL || process.env.SMTP_USER || 'suporte@brservice.com';
-  sendEmail(
-    supportEmail,
-    'BR Service - Atividade Concluída',
-    `<p><strong>Atividade concluída!</strong></p>
+  const detailsHtml = `
+<p><strong>Tarefa:</strong> ${taskTitle}</p>
 <p><strong>Cliente:</strong> ${clientName}</p>
 <p><strong>WhatsApp:</strong> ${clientWpp}</p>
-<p><strong>Tarefa:</strong> ${taskTitle}</p>`
-  ).catch(err => console.error('Erro ao notificar suporte:', err));
+${hasProfessional ? `<p><strong>Profissional:</strong> ${professionalName}</p>` : ''}
+${hasProfessional ? `<p><strong>WhatsApp Profissional:</strong> ${professionalWpp}</p>` : ''}`;
+
+  const emailJobs = [];
+
+  emailJobs.push(sendEmail(
+    supportEmail,
+    'BR Service - Atividade Concluída',
+    `<p><strong>Atividade concluída!</strong></p>${detailsHtml}`
+  ).catch(err => console.error('Erro ao notificar suporte:', err)));
+
+  if (clientEmail) {
+    emailJobs.push(sendEmail(
+      clientEmail,
+      'BR Service - Conclusão da sua tarefa',
+      `<p>Olá <strong>${clientName}</strong>,</p>
+<p>Sua tarefa foi marcada como concluída.</p>
+<p><strong>Tarefa:</strong> ${taskTitle}</p>
+${hasProfessional ? `<p><strong>Profissional:</strong> ${professionalName}</p>` : ''}
+<p>Se precisar de suporte, responda este email.</p>`
+    ).catch(err => console.error('Erro ao notificar cliente:', err)));
+  }
+
+  if (professionalEmail) {
+    emailJobs.push(sendEmail(
+      professionalEmail,
+      'BR Service - Tarefa concluída pelo cliente',
+      `<p>Olá <strong>${professionalName}</strong>,</p>
+<p>O cliente concluiu a tarefa abaixo:</p>
+<p><strong>Tarefa:</strong> ${taskTitle}</p>
+<p><strong>Cliente:</strong> ${clientName}</p>
+<p>Obrigado pelo trabalho!</p>`
+    ).catch(err => console.error('Erro ao notificar profissional:', err)));
+  }
+
+  void Promise.allSettled(emailJobs);
 
   res.json({ success: true });
 });
