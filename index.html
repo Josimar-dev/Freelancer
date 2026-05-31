@@ -1590,6 +1590,17 @@ function escHtml(str) {
   return div.innerHTML;
 }
 
+function formatDateBR(dateStr) {
+  if (!dateStr) return '';
+  const parts = dateStr.split(' ');
+  const dateParts = parts[0] ? parts[0].split('-') : [];
+  const time = parts[1] || '';
+  if (dateParts.length === 3) {
+    return `${dateParts[2]}/${dateParts[1]}/${dateParts[0]} ${time.substring(0, 5)}`;
+  }
+  return dateStr;
+}
+
 // =========================== CHAT ===========================
 let currentChatTaskId = null;
 let chatTimer = null;
@@ -1625,7 +1636,7 @@ async function renderChatList() {
           <h4>${escHtml(c.title)}</h4>
           <p>${c.lastMessage ? escHtml(c.lastMessage.senderName) + ': ' + escHtml(c.lastMessage.message) : 'Nenhuma mensagem ainda'}</p>
         </div>
-        <div class="chat-list-meta">${c.lastMessage ? escHtml(c.lastMessage.createdAt) : ''}</div>
+        <div class="chat-list-meta">${c.lastMessage ? formatDateBR(c.lastMessage.createdAt) : ''}</div>
       </div>
     `).join('');
   } catch (e) {
@@ -1692,7 +1703,7 @@ async function loadChatMessages() {
         <div class="chat-bubble ${isMine ? 'mine' : ''}">
           <strong>${escHtml(m.senderName)}</strong>
           <div>${escHtml(m.message)}</div>
-          <div class="chat-meta-line">${escHtml(m.createdAt)}</div>
+          <div class="chat-meta-line">${formatDateBR(m.createdAt)}</div>
         </div>
       `;
     }).join('');
@@ -1734,7 +1745,7 @@ async function loadSupportMessages() {
         <div class="chat-bubble ${isMine ? 'mine' : ''}">
           <strong>${escHtml(m.senderName)}</strong>
           <div>${escHtml(m.message)}</div>
-          <div class="chat-meta-line">${escHtml(m.createdAt)}</div>
+          <div class="chat-meta-line">${formatDateBR(m.createdAt)}</div>
         </div>
       `;
     }).join('');
