@@ -22,7 +22,9 @@ if (process.env.SMTP_HOST && nodemailer) {
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS
-    }
+    },
+    logger: true,
+    debug: true
   });
 }
 const app = express();
@@ -182,17 +184,14 @@ app.post('/api/login', (req, res) => {
 
 function sendEmail(to, subject, html) {
   if (!transporter) {
-    console.log(`[EMAIL] To: ${to}`);
-    console.log(`[EMAIL] Subject: ${subject}`);
-    console.log(`[EMAIL] Body: ${html}`);
-    return Promise.reject(new Error('SMTP não configurado.'));
+    console.log(`[EMAIL SIMULADO] To: ${to}`);
+    console.log(`[EMAIL SIMULADO] Subject: ${subject}`);
+    console.log(`[EMAIL SIMULADO] Body: ${html}`);
+    return Promise.resolve({ simulated: true });
   }
-  return transporter.sendMail({
-    from: process.env.SMTP_FROM || `"BR Service" <${process.env.SMTP_USER}>`,
-    to,
-    subject,
-    html
-  });
+  const from = process.env.SMTP_FROM || `"BR Service" <${process.env.SMTP_USER}>`;
+  console.log(`[SMTP] Enviando email para ${to} de ${from}...`);
+  return transporter.sendMail({ from, to, subject, html });
 }
 
 app.post('/api/forgot-password', async (req, res) => {
@@ -216,7 +215,7 @@ app.post('/api/forgot-password', async (req, res) => {
   const userName = user[0].values[0][1];
 
   try {
-    await sendEmail(
+    const info = await sendEmail(
       email,
       'BR Service - Recuperação de Senha',
       `<p>Olá <strong>${userName}</strong>,</p>
@@ -226,12 +225,26 @@ app.post('/api/forgot-password', async (req, res) => {
 <p>Este link expira em 1 hora.</p>
 <p>Se você não solicitou esta recuperação, ignore este email.</p>`
     );
+    console.log(`[SMTP] Email enviado com sucesso:`, info.messageId || info);
   } catch (err) {
-    console.error('Erro ao enviar email:', err);
-    return res.status(500).json({ error: 'Erro ao enviar email de recuperação. Verifique a configuração SMTP.' });
+    console.error('[SMTP] Erro ao enviar email:', err);
+    return res.status(500).json({ error: 'Erro ao enviar email de recuperação. Verifique a configuração SMTP.', detail: err.message });
   }
 
   res.json({ message: 'Se o email existir, você receberá um link de recuperação.' });
+});
+
+app.post('/api/test-email', async (req, res) => {
+  const { to } = req.body;
+  if (!to) return res.status(400).json({ error: 'Informe o email de destino.' });
+  try {
+    const info = await sendEmail(to, 'BR Service - Teste SMTP', '<p>Teste de envio SMTP funcionando!</p>');
+    console.log('[SMTP TEST] Enviado:', info.messageId || info);
+    res.json({ success: true, message: 'Email de teste enviado!' });
+  } catch (err) {
+    console.error('[SMTP TEST] Erro:', err);
+    res.status(500).json({ error: 'Falha ao enviar email de teste.', detail: err.message });
+  }
 });
 
 app.post('/api/reset-password', (req, res) => {
