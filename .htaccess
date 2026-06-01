@@ -12,7 +12,7 @@ SetEnv SMTP_HOST "smtp.gmail.com"
 SetEnv SMTP_PORT "587"
 SetEnv SMTP_SECURE "false"
 SetEnv SMTP_USER "josimars187@gmail.com"
-SetEnv SMTP_PASS "mfgv kosf fnyj ftvp"
+SetEnv SMTP_PASS "adls zzku tqnu keen"
 SetEnv SMTP_FROM "BR Service <josimars187@gmail.com>"
 RewriteRule ^\.builds - [F,L]
 

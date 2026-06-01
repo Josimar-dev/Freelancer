@@ -242,17 +242,74 @@ app.post('/api/forgot-password', async (req, res) => {
   const resetLink = `${APP_URL}/?reset-token=${token}`;
   const userName = user[0].values[0][1];
 
+  function emailTemplate(body) {
+    return `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background-color:#f0f2f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f0f2f5;padding:40px 16px">
+    <tr><td align="center">
+      <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%">
+        <tr><td style="padding:0 0 28px;text-align:center">
+          <table cellpadding="0" cellspacing="0" style="display:inline-block">
+            <tr><td style="background:#0b1220;padding:10px 22px;border-radius:10px">
+              <span style="color:#38bdf8;font-size:20px;font-weight:800;letter-spacing:1.5px">BR</span>
+              <span style="color:#fff;font-size:20px;font-weight:300;letter-spacing:2px">SERVICE</span>
+            </td></tr>
+          </table>
+        </td></tr>
+        <tr><td style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.08)">
+          <table cellpadding="0" cellspacing="0" width="100%">
+            <tr><td style="background:linear-gradient(145deg,#0b1220 0%,#162044 50%,#0b1220 100%);padding:40px 36px 28px;text-align:center;position:relative">
+              <div style="position:absolute;top:0;left:0;right:0;bottom:0;opacity:0.08;background-image:radial-gradient(circle at 20% 40%,#38bdf8 0%,transparent 60%),radial-gradient(circle at 80% 60%,#22d3ee 0%,transparent 50%)"></div>
+              <table cellpadding="0" cellspacing="0" style="margin:0 auto 16px">
+                <tr><td style="width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,#38bdf8,#22d3ee);text-align:center;vertical-align:middle;font-size:26px;line-height:60px;box-shadow:0 8px 24px rgba(56,189,248,0.35)">🔐</td></tr>
+              </table>
+              <h1 style="color:#ffffff;font-size:24px;font-weight:700;margin:0;letter-spacing:-0.3px">Recupera\u00e7\u00e3o de senha</h1>
+              <p style="color:rgba(255,255,255,0.7);font-size:14px;margin:8px 0 0;line-height:1.5">Clique no bot\u00e3o abaixo para redefinir sua senha</p>
+            </td></tr>
+            <tr><td style="padding:36px 36px 16px">
+              ${body}
+            </td></tr>
+            <tr><td style="padding:24px 36px;border-top:1px solid #eef0f4;text-align:center">
+              <p style="font-size:12px;color:#999;margin:0 0 4px;line-height:1.6">Este link expira em <strong>1 hora</strong> por seguran\u00e7a.</p>
+              <p style="font-size:12px;color:#bbb;margin:0;line-height:1.6">Se voc\u00ea n\u00e3o solicitou esta redefini\u00e7\u00e3o, desconsidere este email.</p>
+            </td></tr>
+          </table>
+        </td></tr>
+        <tr><td style="padding:20px 16px 0;text-align:center">
+          <p style="font-size:11px;color:#aaa;margin:0 0 4px;line-height:1.5">BR Service — Plataforma de tarefas de programa\u00e7\u00e3o</p>
+          <p style="font-size:11px;color:#ccc;margin:0">© 2026 BR Service. Todos os direitos reservados.</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+  }
+
+  const emailHtml = emailTemplate(`
+    <p style="font-size:16px;color:#1a1a2e;margin:0 0 18px">Ol\u00e1 <strong style="color:#0b1220">${userName}</strong>,</p>
+    <p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 24px">Recebemos uma solicita\u00e7\u00e3o de redefini\u00e7\u00e3o de senha para sua conta. Para criar uma nova senha, clique no bot\u00e3o abaixo:</p>
+    <table cellpadding="0" cellspacing="0" style="margin:0 auto 28px">
+      <tr><td align="center" style="background:linear-gradient(135deg,#38bdf8,#22d3ee);border-radius:12px;box-shadow:0 8px 24px rgba(56,189,248,0.35)">
+        <a href="${resetLink}" style="display:inline-block;padding:15px 48px;font-size:15px;font-weight:700;color:#0b1220;text-decoration:none;letter-spacing:0.5px;border-radius:12px">REDEFINIR SENHA</a>
+      </td></tr>
+    </table>
+    <table cellpadding="16" cellspacing="0" style="background:#f7f8fa;border-radius:12px;margin:0 0 8px;width:100%">
+      <tr><td style="font-size:13px;color:#666;line-height:1.6;padding:16px">
+        <strong style="color:#333">N\u00e3o foi voc\u00ea?</strong><br>
+        Se voc\u00ea n\u00e3o solicitou esta redefini\u00e7\u00e3o, ignore este email. Sua conta permanece segura.
+      </td></tr>
+    </table>
+    <p style="font-size:12px;color:#999;margin:20px 0 0;line-height:1.6">Caso o bot\u00e3o n\u00e3o funcione, copie e cole o link abaixo no seu navegador:</p>
+    <table cellpadding="10" cellspacing="0" style="background:#f0f2f5;border-radius:8px;margin:8px 0 0;width:100%">
+      <tr><td style="font-size:12px;color:#38bdf8;word-break:break-all;line-height:1.5;padding:10px 14px;font-family:monospace">${resetLink}</td></tr>
+    </table>
+  `);
+
   try {
-    const info = await sendEmail(
-      email,
-      'BR Service - Recuperação de Senha',
-      `<p>Olá <strong>${userName}</strong>,</p>
-<p>Recebemos uma solicitação de recuperação de senha para sua conta no BR Service.</p>
-<p><a href="${resetLink}" style="display:inline-block;padding:12px 24px;background:#38bdf8;color:#0f172a;text-decoration:none;border-radius:8px;font-weight:bold;">Redefinir Senha</a></p>
-<p>Ou copie o link: <br>${resetLink}</p>
-<p>Este link expira em 1 hora.</p>
-<p>Se você não solicitou esta recuperação, ignore este email.</p>`
-    );
+    const info = await sendEmail(email, 'BR Service - Recuperação de Senha', emailHtml);
     console.log(`[SMTP] Email enviado com sucesso:`, info.messageId || info);
   } catch (err) {
     console.error('[SMTP] Erro ao enviar email:', err);
@@ -750,29 +807,90 @@ app.put('/api/tasks/:id/complete', (req, res) => {
 
   const supportEmail = process.env.SUPPORT_EMAIL || process.env.SMTP_USER || 'suporte@brservice.com';
   const detailsHtml = `
-<p><strong>Tarefa:</strong> ${taskTitle}</p>
-<p><strong>Cliente:</strong> ${clientName}</p>
-<p><strong>WhatsApp:</strong> ${clientWpp}</p>
-${hasProfessional ? `<p><strong>Profissional:</strong> ${professionalName}</p>` : ''}
-${hasProfessional ? `<p><strong>WhatsApp Profissional:</strong> ${professionalWpp}</p>` : ''}`;
+<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 8px"><strong>Tarefa:</strong> ${taskTitle}</p>
+<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 8px"><strong>Cliente:</strong> ${clientName}</p>
+<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 8px"><strong>WhatsApp:</strong> ${clientWpp}</p>
+${hasProfessional ? `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 8px"><strong>Profissional:</strong> ${professionalName}</p>` : ''}
+${hasProfessional ? `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 8px"><strong>WhatsApp Prof.:</strong> ${professionalWpp}</p>` : ''}`;
+
+  function baseTemplate(icon, heading, body) {
+    return `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background-color:#f0f2f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f0f2f5;padding:40px 16px">
+    <tr><td align="center">
+      <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%">
+        <tr><td style="padding:0 0 28px;text-align:center">
+          <table cellpadding="0" cellspacing="0" style="display:inline-block">
+            <tr><td style="background:#0b1220;padding:10px 22px;border-radius:10px">
+              <span style="color:#38bdf8;font-size:20px;font-weight:800;letter-spacing:1.5px">BR</span>
+              <span style="color:#fff;font-size:20px;font-weight:300;letter-spacing:2px">SERVICE</span>
+            </td></tr>
+          </table>
+        </td></tr>
+        <tr><td style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.08)">
+          <table cellpadding="0" cellspacing="0" width="100%">
+            <tr><td style="background:linear-gradient(145deg,#0b1220 0%,#162044 50%,#0b1220 100%);padding:40px 36px 28px;text-align:center;position:relative">
+              <div style="position:absolute;top:0;left:0;right:0;bottom:0;opacity:0.08;background-image:radial-gradient(circle at 20% 40%,#38bdf8 0%,transparent 60%),radial-gradient(circle at 80% 60%,#22d3ee 0%,transparent 50%)"></div>
+              <table cellpadding="0" cellspacing="0" style="margin:0 auto 16px">
+                <tr><td style="width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,#38bdf8,#22d3ee);text-align:center;vertical-align:middle;font-size:26px;line-height:60px;box-shadow:0 8px 24px rgba(56,189,248,0.35)">${icon}</td></tr>
+              </table>
+              <h1 style="color:#ffffff;font-size:24px;font-weight:700;margin:0;letter-spacing:-0.3px">${heading}</h1>
+            </td></tr>
+            <tr><td style="padding:36px 36px 16px">
+              ${body}
+            </td></tr>
+            <tr><td style="padding:20px 36px;border-top:1px solid #eef0f4;text-align:center">
+              <p style="font-size:11px;color:#bbb;margin:0">BR Service — Plataforma de tarefas de programa\u00e7\u00e3o</p>
+              <p style="font-size:11px;color:#ccc;margin:4px 0 0">© 2026 BR Service. Todos os direitos reservados.</p>
+            </td></tr>
+          </table>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+  }
+
+  function taskInfoTable(rows) {
+    let r = '';
+    rows.forEach((row, i) => {
+      r += `<tr><td style="font-size:14px;color:#333;padding:12px 16px${i > 0 ? ';border-top:1px solid #e8e8e8' : ''}"><strong>${row.label}:</strong> ${row.value}</td></tr>`;
+    });
+    return `<table cellpadding="0" cellspacing="0" style="background:#f7f8fa;border-radius:12px;margin:16px 0;width:100%">${r}</table>`;
+  }
 
   const emailJobs = [];
 
   emailJobs.push(sendEmail(
     supportEmail,
     'BR Service - Atividade Concluída',
-    `<p><strong>Atividade concluída!</strong></p>${detailsHtml}`
+    baseTemplate('✅', 'Atividade Concluída', `
+      <p style="font-size:15px;color:#1a1a2e;margin:0 0 16px"><strong>Uma atividade foi conclu\u00edda!</strong></p>
+      ${taskInfoTable([
+        { label: 'Tarefa', value: taskTitle },
+        { label: 'Cliente', value: clientName },
+        { label: 'WhatsApp', value: clientWpp },
+        ...(hasProfessional ? [{ label: 'Profissional', value: professionalName }, { label: 'WhatsApp Prof.', value: professionalWpp }] : [])
+      ])}
+    `)
   ).catch(err => console.error('Erro ao notificar suporte:', err)));
 
   if (clientEmail) {
     emailJobs.push(sendEmail(
       clientEmail,
-      'BR Service - Conclusão da sua tarefa',
-      `<p>Olá <strong>${clientName}</strong>,</p>
-<p>Sua tarefa foi marcada como concluída.</p>
-<p><strong>Tarefa:</strong> ${taskTitle}</p>
-${hasProfessional ? `<p><strong>Profissional:</strong> ${professionalName}</p>` : ''}
-<p>Se precisar de suporte, responda este email.</p>`
+      'BR Service - Tarefa concluída',
+      baseTemplate('🎉', 'Tarefa Concluída', `
+        <p style="font-size:16px;color:#1a1a2e;margin:0 0 16px">Ol\u00e1 <strong style="color:#0b1220">${clientName}</strong>,</p>
+        <p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 8px">Sua tarefa foi marcada como <strong>conclu\u00edda</strong> com sucesso! 🎉</p>
+        ${taskInfoTable([
+          { label: 'Tarefa', value: taskTitle },
+          ...(hasProfessional ? [{ label: 'Profissional', value: professionalName }] : [])
+        ])}
+        <p style="font-size:13px;color:#888;line-height:1.6;margin:16px 0 0">Se precisar de suporte, responda este email ou entre em contato pelo nosso WhatsApp.</p>
+      `)
     ).catch(err => console.error('Erro ao notificar cliente:', err)));
   }
 
@@ -780,11 +898,15 @@ ${hasProfessional ? `<p><strong>Profissional:</strong> ${professionalName}</p>` 
     emailJobs.push(sendEmail(
       professionalEmail,
       'BR Service - Tarefa concluída pelo cliente',
-      `<p>Olá <strong>${professionalName}</strong>,</p>
-<p>O cliente concluiu a tarefa abaixo:</p>
-<p><strong>Tarefa:</strong> ${taskTitle}</p>
-<p><strong>Cliente:</strong> ${clientName}</p>
-<p>Obrigado pelo trabalho!</p>`
+      baseTemplate('👏', 'Tarefa Concluída', `
+        <p style="font-size:16px;color:#1a1a2e;margin:0 0 16px">Ol\u00e1 <strong style="color:#0b1220">${professionalName}</strong>,</p>
+        <p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 8px">O cliente concluiu a tarefa abaixo. Obrigado pelo seu trabalho! 👏</p>
+        ${taskInfoTable([
+          { label: 'Tarefa', value: taskTitle },
+          { label: 'Cliente', value: clientName }
+        ])}
+        <p style="font-size:13px;color:#888;line-height:1.6;margin:16px 0 0">Continue assim e mantenha seu hist\u00f3rico de entregas atualizado!</p>
+      `)
     ).catch(err => console.error('Erro ao notificar profissional:', err)));
   }
 
