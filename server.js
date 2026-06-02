@@ -108,6 +108,18 @@ async function start() {
     )
   `);
 
+  db.run(`
+    CREATE TABLE IF NOT EXISTS onboarding (
+      userId INTEGER PRIMARY KEY,
+      bio TEXT DEFAULT '',
+      skills TEXT DEFAULT '',
+      portfolio TEXT DEFAULT '',
+      linkedin TEXT DEFAULT '',
+      availability TEXT DEFAULT '',
+      createdAt TEXT DEFAULT (datetime('now'))
+    )
+  `);
+
   saveDb();
   console.log('Banco SQLite inicializado.');
 
@@ -791,6 +803,74 @@ ${hasProfessional ? `<p><strong>Profissional:</strong> ${professionalName}</p>` 
   void Promise.allSettled(emailJobs);
 
   res.json({ success: true });
+});
+
+// ======================== ONBOARDING ========================
+
+app.get('/api/onboarding/:userId', (req, res) => {
+  const userId = parseInt(req.params.userId);
+  if (!userId) return res.status(400).json({ error: 'Usuario obrigatorio.' });
+
+  const result = db.exec(`SELECT userId, bio, skills, portfolio, linkedin, availability, createdAt FROM onboarding WHERE userId = ${userId}`);
+  if (!result.length || !result[0].values.length) {
+    return res.json({ completed: false });
+  }
+  const row = result[0].values[0];
+  res.json({
+    completed: true,
+    userId: row[0],
+    bio: row[1],
+    skills: row[2],
+    portfolio: row[3],
+    linkedin: row[4],
+    availability: row[5],
+    createdAt: row[6]
+  });
+});
+
+app.post('/api/onboarding/:userId', (req, res) => {
+  const userId = parseInt(req.params.userId);
+  if (!userId) return res.status(400).json({ error: 'Usuario obrigatorio.' });
+
+  const { bio, skills, portfolio, linkedin, availability } = req.body;
+  if (!bio || !skills || !availability) {
+    return res.status(400).json({ error: 'Preencha bio, habilidades e disponibilidade.' });
+  }
+
+  const safeBio = safeSql(bio);
+  const safeSkills = safeSql(skills);
+  const safePortfolio = safeSql(portfolio || '');
+  const safeLinkedin = safeSql(linkedin || '');
+  const safeAvailability = safeSql(availability);
+
+  const existing = db.exec(`SELECT userId FROM onboarding WHERE userId = ${userId}`);
+  if (existing.length && existing[0].values.length) {
+    db.run(`
+      UPDATE onboarding
+      SET bio = '${safeBio}', skills = '${safeSkills}', portfolio = '${safePortfolio}',
+          linkedin = '${safeLinkedin}', availability = '${safeAvailability}',
+          createdAt = datetime('now')
+      WHERE userId = ${userId}
+    `);
+  } else {
+    db.run(`
+      INSERT INTO onboarding (userId, bio, skills, portfolio, linkedin, availability)
+      VALUES (${userId}, '${safeBio}', '${safeSkills}', '${safePortfolio}',
+              '${safeLinkedin}', '${safeAvailability}')
+    `);
+  }
+  saveDb();
+
+  res.json({ success: true });
+});
+
+app.get('/api/onboarding/check/:userId', (req, res) => {
+  const userId = parseInt(req.params.userId);
+  if (!userId) return res.status(400).json({ error: 'Usuario obrigatorio.' });
+
+  const result = db.exec(`SELECT userId FROM onboarding WHERE userId = ${userId}`);
+  const completed = result.length && result[0].values.length > 0;
+  res.json({ completed });
 });
 
 // ======================== SPA CATCH-ALL ========================

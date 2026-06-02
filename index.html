@@ -839,6 +839,142 @@ a.btn {
   .chat-bubble { max-width: 88%; }
 }
 
+/* Onboarding Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 20px;
+  animation: fadeIn 0.25s ease;
+}
+
+.modal-box {
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(11, 18, 32, 0.98));
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  width: 100%;
+  max-width: 540px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 32px;
+  box-shadow: var(--shadow);
+  animation: floatIn 0.35s ease;
+}
+
+.modal-box h2 {
+  font-size: 22px;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.modal-box .modal-sub {
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 24px;
+}
+
+.modal-box .form-group {
+  margin-bottom: 18px;
+}
+
+.modal-box .form-group label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.modal-box .form-group .required {
+  color: var(--danger);
+  font-size: 14px;
+}
+
+.modal-box .btn {
+  width: 100%;
+  margin-top: 6px;
+}
+
+.onboarding-banner {
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.12), rgba(34, 211, 238, 0.08));
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: .2s;
+}
+
+.onboarding-banner:hover {
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.18), rgba(34, 211, 238, 0.12));
+  border-color: rgba(56, 189, 248, 0.5);
+}
+
+.onboarding-banner .banner-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+  color: #0b1220;
+}
+
+.onboarding-banner .banner-text {
+  flex: 1;
+  color: var(--text);
+}
+
+.onboarding-banner .banner-text strong {
+  color: var(--accent);
+}
+
+.onboarding-banner .banner-arrow {
+  color: var(--accent);
+  font-size: 20px;
+}
+
+/* Profile info in chat */
+.profile-info-card {
+  background: rgba(17, 24, 39, 0.9);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  margin: 12px 20px;
+}
+
+.profile-info-card h4 {
+  color: var(--accent);
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.profile-info-card p {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.5;
+  margin-bottom: 4px;
+}
+
+.profile-info-card a {
+  color: var(--accent);
+  font-size: 13px;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }
@@ -1064,6 +1200,42 @@ a.btn {
 
 <!-- Toast -->
 <div id="toast" class="toast"></div>
+
+<!-- Onboarding Modal -->
+<div id="onboardingModal" class="modal-overlay" style="display:none">
+  <div class="modal-box">
+    <h2>Complete seu perfil 🚀</h2>
+    <p class="modal-sub">Antes de conversar com o cliente, conte um pouco sobre você para que ele saiba quem é o profissional.</p>
+    <div class="form-group">
+      <label>Sobre você <span class="required">*</span></label>
+      <textarea id="onBio" rows="3" placeholder="Conte um pouco sobre sua experiência, formaçao, áreas de atuaçao..."></textarea>
+    </div>
+    <div class="form-group">
+      <label>Habilidades & Tecnologias <span class="required">*</span></label>
+      <input type="text" id="onSkills" placeholder="Ex: JavaScript, Python, React, Node.js, SQL...">
+    </div>
+    <div class="form-group">
+      <label>Portfólio / GitHub</label>
+      <input type="text" id="onPortfolio" placeholder="https://github.com/seu-usuario">
+    </div>
+    <div class="form-group">
+      <label>LinkedIn</label>
+      <input type="text" id="onLinkedin" placeholder="https://linkedin.com/in/seu-usuario">
+    </div>
+    <div class="form-group">
+      <label>Disponibilidade <span class="required">*</span></label>
+      <select id="onAvailability">
+        <option value="">Selecione...</option>
+        <option value="full-time">Tempo integral (40h/semana)</option>
+        <option value="part-time">Meio período (20h/semana)</option>
+        <option value="freelance">Apenas freelancer (horário flexível)</option>
+        <option value="weekends">Apenas finais de semana</option>
+        <option value="evenings">Apenas à noite</option>
+      </select>
+    </div>
+    <button class="btn btn-primary" onclick="saveOnboarding()">Salvar e continuar</button>
+  </div>
+</div>
 
 <script>
 const API = '/api';
@@ -1590,6 +1762,145 @@ function escHtml(str) {
   return div.innerHTML;
 }
 
+// =========================== ONBOARDING ===========================
+let onboardingCallback = null;
+
+async function checkOnboarding(userId) {
+  try {
+    const res = await fetch(`${API}/onboarding/check/${userId}`);
+    const data = await res.json();
+    return data.completed;
+  } catch {
+    return false;
+  }
+}
+
+function showOnboardingModal(callback) {
+  onboardingCallback = callback;
+  document.getElementById('onboardingModal').style.display = 'flex';
+  // Pre-fill if data exists
+  const s = getSession();
+  if (s) {
+    fetch(`${API}/onboarding/${s.userId}`).then(r => r.json()).then(data => {
+      if (data.completed) {
+        document.getElementById('onBio').value = data.bio || '';
+        document.getElementById('onSkills').value = data.skills || '';
+        document.getElementById('onPortfolio').value = data.portfolio || '';
+        document.getElementById('onLinkedin').value = data.linkedin || '';
+        document.getElementById('onAvailability').value = data.availability || '';
+      }
+    }).catch(() => {});
+  }
+}
+
+async function saveOnboarding() {
+  const s = getSession();
+  if (!s) return;
+
+  const bio = document.getElementById('onBio').value.trim();
+  const skills = document.getElementById('onSkills').value.trim();
+  const portfolio = document.getElementById('onPortfolio').value.trim();
+  const linkedin = document.getElementById('onLinkedin').value.trim();
+  const availability = document.getElementById('onAvailability').value;
+
+  if (!bio) return showToast('Conte um pouco sobre voce.', true);
+  if (!skills) return showToast('Informe suas habilidades.', true);
+  if (!availability) return showToast('Selecione sua disponibilidade.', true);
+
+  try {
+    const res = await fetch(`${API}/onboarding/${s.userId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bio, skills, portfolio, linkedin, availability })
+    });
+    const data = await res.json();
+    if (!res.ok) return showToast(data.error || 'Erro ao salvar.', true);
+
+    showToast('Perfil salvo com sucesso!');
+    document.getElementById('onboardingModal').style.display = 'none';
+
+    if (onboardingCallback) {
+      const cb = onboardingCallback;
+      onboardingCallback = null;
+      cb();
+    } else {
+      renderChatList();
+    }
+  } catch (e) {
+    showToast('Erro de conexao.', true);
+  }
+}
+
+// Show professional profile in chat header for clients
+async function loadChatMessages() {
+  const s = getSession();
+  if (!s || !currentChatTaskId) return;
+
+  try {
+    const res = await fetch(`${API}/tasks/${currentChatTaskId}/chat?userId=${s.userId}`);
+    const data = await res.json();
+    if (!res.ok) return showToast(data.error || 'Erro ao carregar conversa.', true);
+
+    const taskTitle = data.task?.title || 'Conversa da tarefa';
+    const clientName = data.task?.clientName || 'Cliente';
+    const professionalName = data.task?.professionalName || 'Profissional';
+
+    document.getElementById('chatActiveTitle').textContent = taskTitle;
+    document.getElementById('chatActiveParticipants').textContent = `${clientName} × ${professionalName}`;
+    document.getElementById('chatInputArea').style.display = 'flex';
+
+    const me = s.userId;
+    const otherName = me === data.task.clientId ? data.task.professionalName : data.task.clientName;
+
+    const box = document.getElementById('chatMessages');
+
+    // Build messages HTML
+    let html = '';
+
+    // Show professional profile for clients
+    if (s.role === 'cliente' && data.task.professionalId) {
+      try {
+        const profRes = await fetch(`${API}/onboarding/${data.task.professionalId}`);
+        const profData = await profRes.json();
+        if (profData.completed) {
+          html += `
+            <div class="profile-info-card">
+              <h4>${escHtml(professionalName)} - Perfil</h4>
+              <p><strong>Sobre:</strong> ${escHtml(profData.bio)}</p>
+              <p><strong>Habilidades:</strong> ${escHtml(profData.skills)}</p>
+              <p><strong>Disponibilidade:</strong> ${escHtml(profData.availability)}</p>
+              ${profData.portfolio ? `<p><strong>Portfolio:</strong> <a href="${escHtml(profData.portfolio)}" target="_blank">${escHtml(profData.portfolio)}</a></p>` : ''}
+              ${profData.linkedin ? `<p><strong>LinkedIn:</strong> <a href="${escHtml(profData.linkedin)}" target="_blank">${escHtml(profData.linkedin)}</a></p>` : ''}
+            </div>
+          `;
+        }
+      } catch {}
+    }
+
+    if (!data.messages || data.messages.length === 0) {
+      html += '<div class="chat-empty">Nenhuma mensagem ainda. Seja o primeiro a enviar.</div>';
+      box.innerHTML = html;
+      return;
+    }
+
+    html += data.messages.map(m => {
+      const isMine = m.senderId === s.userId;
+      return `
+        <div class="chat-bubble ${isMine ? 'mine' : ''}">
+          <strong>${escHtml(m.senderName)}</strong>
+          <div>${escHtml(m.message)}</div>
+          <div class="chat-meta-line">${escHtml(m.createdAt)}</div>
+        </div>
+      `;
+    }).join('');
+
+    box.innerHTML = html;
+    box.scrollTop = box.scrollHeight;
+  } catch (e) {
+    showToast('Erro de conexao no chat.', true);
+  }
+}
+
 // =========================== CHAT ===========================
 let currentChatTaskId = null;
 let chatTimer = null;
@@ -1608,6 +1919,25 @@ async function renderChatList() {
   participants.textContent = '';
   inputArea.style.display = 'none';
   msgs.innerHTML = '<div class="chat-placeholder">Selecione uma conversa ao lado</div>';
+
+  // Show onboarding suggestion for professionals
+  if (s.role === 'profissional') {
+    const onboarded = await checkOnboarding(s.userId);
+    if (!onboarded) {
+      list.innerHTML = `
+        <div class="onboarding-banner" onclick="showOnboardingModal(null)">
+          <div class="banner-icon">&#9997;</div>
+          <div class="banner-text">
+            <strong>Complete seu perfil!</strong><br>
+            Preencha suas informacoes para que os clientes conhecam voce.
+          </div>
+          <div class="banner-arrow">&rarr;</div>
+        </div>
+        <div class="chat-empty" style="padding:20px">Complete seu perfil para conversar com clientes.</div>
+      `;
+      return;
+    }
+  }
 
   try {
     const res = await fetch(`${API}/user-chats?userId=${s.userId}`);
@@ -1633,7 +1963,22 @@ async function renderChatList() {
   }
 }
 
-function openTaskChat(taskId) {
+async function openTaskChat(taskId) {
+  const s = getSession();
+  if (!s) return;
+
+  // Check onboarding for professionals
+  if (s.role === 'profissional') {
+    const onboarded = await checkOnboarding(s.userId);
+    if (!onboarded) {
+      showOnboardingModal(() => proceedToChat(taskId));
+      return;
+    }
+  }
+  proceedToChat(taskId);
+}
+
+function proceedToChat(taskId) {
   currentChatType = 'task';
   currentChatTaskId = taskId;
   document.getElementById('chatConversationPanel').classList.add('show');
@@ -1658,49 +2003,6 @@ function openSupportChatFromHeader() {
   const s = getSession();
   if (!s) return;
   openSupportChat(s.userId);
-}
-
-async function loadChatMessages() {
-  const s = getSession();
-  if (!s || !currentChatTaskId) return;
-
-  try {
-    const res = await fetch(`${API}/tasks/${currentChatTaskId}/chat?userId=${s.userId}`);
-    const data = await res.json();
-    if (!res.ok) return showToast(data.error || 'Erro ao carregar conversa.', true);
-
-    const taskTitle = data.task?.title || 'Conversa da tarefa';
-    const clientName = data.task?.clientName || 'Cliente';
-    const professionalName = data.task?.professionalName || 'Profissional';
-
-    document.getElementById('chatActiveTitle').textContent = taskTitle;
-    document.getElementById('chatActiveParticipants').textContent = `${clientName} × ${professionalName}`;
-    document.getElementById('chatInputArea').style.display = 'flex';
-
-    const me = s.userId;
-    const otherName = me === data.task.clientId ? data.task.professionalName : data.task.clientName;
-
-    const box = document.getElementById('chatMessages');
-    if (!data.messages || data.messages.length === 0) {
-      box.innerHTML = '<div class="chat-empty">Nenhuma mensagem ainda. Seja o primeiro a enviar.</div>';
-      return;
-    }
-
-    box.innerHTML = data.messages.map(m => {
-      const isMine = m.senderId === s.userId;
-      return `
-        <div class="chat-bubble ${isMine ? 'mine' : ''}">
-          <strong>${escHtml(m.senderName)}</strong>
-          <div>${escHtml(m.message)}</div>
-          <div class="chat-meta-line">${escHtml(m.createdAt)}</div>
-        </div>
-      `;
-    }).join('');
-
-    box.scrollTop = box.scrollHeight;
-  } catch (e) {
-    showToast('Erro de conexao no chat.', true);
-  }
 }
 
 async function loadSupportMessages() {
