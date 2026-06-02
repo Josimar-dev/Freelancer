@@ -55,6 +55,8 @@ async function start() {
       password TEXT NOT NULL,
       role TEXT NOT NULL DEFAULT 'cliente',
       whatsapp TEXT DEFAULT '',
+      lastOnboardingReminder TEXT,
+      onboardingReminderCount INTEGER DEFAULT 0,
       createdAt TEXT DEFAULT (datetime('now'))
     )
   `);
@@ -116,6 +118,10 @@ async function start() {
       portfolio TEXT DEFAULT '',
       linkedin TEXT DEFAULT '',
       availability TEXT DEFAULT '',
+      experience TEXT DEFAULT '',
+      categories TEXT DEFAULT '',
+      hourlyRate REAL DEFAULT 0,
+      photo TEXT DEFAULT '',
       createdAt TEXT DEFAULT (datetime('now'))
     )
   `);
@@ -933,7 +939,7 @@ app.get('/api/onboarding/:userId', (req, res) => {
   const userId = parseInt(req.params.userId);
   if (!userId) return res.status(400).json({ error: 'Usuario obrigatorio.' });
 
-  const result = db.exec(`SELECT userId, bio, skills, portfolio, linkedin, availability, createdAt FROM onboarding WHERE userId = ${userId}`);
+  const result = db.exec(`SELECT userId, bio, skills, portfolio, linkedin, availability, experience, categories, hourlyRate, photo, createdAt FROM onboarding WHERE userId = ${userId}`);
   if (!result.length || !result[0].values.length) {
     return res.json({ completed: false });
   }
@@ -946,7 +952,11 @@ app.get('/api/onboarding/:userId', (req, res) => {
     portfolio: row[3],
     linkedin: row[4],
     availability: row[5],
-    createdAt: row[6]
+    experience: row[6],
+    categories: row[7],
+    hourlyRate: row[8],
+    photo: row[9],
+    createdAt: row[10]
   });
 });
 
@@ -954,7 +964,7 @@ app.post('/api/onboarding/:userId', (req, res) => {
   const userId = parseInt(req.params.userId);
   if (!userId) return res.status(400).json({ error: 'Usuario obrigatorio.' });
 
-  const { bio, skills, portfolio, linkedin, availability } = req.body;
+  const { bio, skills, portfolio, linkedin, availability, experience, categories, hourlyRate, photo } = req.body;
   if (!bio || !skills || !availability) {
     return res.status(400).json({ error: 'Preencha bio, habilidades e disponibilidade.' });
   }
@@ -964,6 +974,10 @@ app.post('/api/onboarding/:userId', (req, res) => {
   const safePortfolio = safeSql(portfolio || '');
   const safeLinkedin = safeSql(linkedin || '');
   const safeAvailability = safeSql(availability);
+  const safeExperience = safeSql(experience || '');
+  const safeCategories = safeSql(categories || '');
+  const rate = parseFloat(hourlyRate) || 0;
+  const safePhoto = safeSql(photo || '');
 
   const existing = db.exec(`SELECT userId FROM onboarding WHERE userId = ${userId}`);
   if (existing.length && existing[0].values.length) {
@@ -971,14 +985,17 @@ app.post('/api/onboarding/:userId', (req, res) => {
       UPDATE onboarding
       SET bio = '${safeBio}', skills = '${safeSkills}', portfolio = '${safePortfolio}',
           linkedin = '${safeLinkedin}', availability = '${safeAvailability}',
+          experience = '${safeExperience}', categories = '${safeCategories}',
+          hourlyRate = ${rate}, photo = '${safePhoto}',
           createdAt = datetime('now')
       WHERE userId = ${userId}
     `);
   } else {
     db.run(`
-      INSERT INTO onboarding (userId, bio, skills, portfolio, linkedin, availability)
+      INSERT INTO onboarding (userId, bio, skills, portfolio, linkedin, availability, experience, categories, hourlyRate, photo)
       VALUES (${userId}, '${safeBio}', '${safeSkills}', '${safePortfolio}',
-              '${safeLinkedin}', '${safeAvailability}')
+              '${safeLinkedin}', '${safeAvailability}', '${safeExperience}',
+              '${safeCategories}', ${rate}, '${safePhoto}')
     `);
   }
   saveDb();
@@ -995,6 +1012,169 @@ app.get('/api/onboarding/check/:userId', (req, res) => {
   res.json({ completed });
 });
 
+// ======================== ONBOARDING REMINDERS ========================
+
+const REMINDER_INTERVAL_MS = 6 * 60 * 60 * 1000; // 6 hours
+const MIN_AGE_FOR_REMINDER_MS = 2 * 60 * 60 * 1000; // 2 hours after registration
+const COOLDOWN_MS = 24 * 60 * 60 * 1000; // wait 24h between reminders
+
+function onboardingEmailTemplate(icon, heading, body) {
+  return `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background-color:#f0f2f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f0f2f5;padding:40px 16px">
+    <tr><td align="center">
+      <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%">
+        <tr><td style="padding:0 0 28px;text-align:center">
+          <table cellpadding="0" cellspacing="0" style="display:inline-block">
+            <tr><td style="background:#0b1220;padding:10px 22px;border-radius:10px">
+              <span style="color:#38bdf8;font-size:20px;font-weight:800;letter-spacing:1.5px">BR</span>
+              <span style="color:#fff;font-size:20px;font-weight:300;letter-spacing:2px">SERVICE</span>
+            </td></tr>
+          </table>
+        </td></tr>
+        <tr><td style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.08)">
+          <table cellpadding="0" cellspacing="0" width="100%">
+            <tr><td style="background:linear-gradient(145deg,#0b1220 0%,#162044 50%,#0b1220 100%);padding:40px 36px 28px;text-align:center;position:relative">
+              <div style="position:absolute;top:0;left:0;right:0;bottom:0;opacity:0.08;background-image:radial-gradient(circle at 20% 40%,#38bdf8 0%,transparent 60%),radial-gradient(circle at 80% 60%,#22d3ee 0%,transparent 50%)"></div>
+              <table cellpadding="0" cellspacing="0" style="margin:0 auto 16px">
+                <tr><td style="width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,#38bdf8,#22d3ee);text-align:center;vertical-align:middle;font-size:26px;line-height:60px;box-shadow:0 8px 24px rgba(56,189,248,0.35)">${icon}</td></tr>
+              </table>
+              <h1 style="color:#ffffff;font-size:24px;font-weight:700;margin:0;letter-spacing:-0.3px">${heading}</h1>
+            </td></tr>
+            <tr><td style="padding:36px 36px 16px">
+              ${body}
+            </td></tr>
+            <tr><td style="padding:20px 36px;border-top:1px solid #eef0f4;text-align:center">
+              <p style="font-size:11px;color:#bbb;margin:0">BR Service — Plataforma de tarefas de programa\u00e7\u00e3o</p>
+              <p style="font-size:11px;color:#ccc;margin:4px 0 0">© 2026 BR Service. Todos os direitos reservados.</p>
+            </td></tr>
+          </table>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
+function getOnboardingReminderBody(count, daysSinceReg) {
+  const messages = [
+    {
+      subject: 'Complete seu perfil na BR Service',
+      body: `
+        <p style="font-size:15px;color:#555;line-height:1.7;margin:0 0 16px">Ol\u00e1!</p>
+        <p style="font-size:15px;color:#555;line-height:1.7;margin:0 0 16px">
+          Notamos que voc\u00ea se cadastrou na <strong>BR Service</strong> como profissional,
+          mas ainda n\u00e3o completou seu perfil.
+        </p>
+        <p style="font-size:15px;color:#555;line-height:1.7;margin:0 0 16px">
+          Com um perfil completo, os clientes podem conhecer suas habilidades,
+          experi\u00eancia e disponibilidade — aumentando suas chances de ser contratado!
+        </p>`
+    },
+    {
+      subject: 'BR Service — Seu perfil est\u00e1 incompleto',
+      body: `
+        <p style="font-size:15px;color:#555;line-height:1.7;margin:0 0 16px">Ol\u00e1!</p>
+        <p style="font-size:15px;color:#555;line-height:1.7;margin:0 0 16px">
+          J\u00e1 se passaram alguns dias desde que voc\u00ea se cadastrou e seu perfil profissional
+          ainda n\u00e3o foi preenchido.
+        </p>
+        <p style="font-size:15px;color:#555;line-height:1.7;margin:0 0 16px">
+          <strong>Clientes est\u00e3o procurando profissionais como voc\u00ea!</strong>
+          N\u00e3o perca oportunidades — complete seu perfil e comece a receber propostas.
+        </p>`
+    },
+    {
+      subject: 'Ultimo aviso! Complete seu perfil na BR Service',
+      body: `
+        <p style="font-size:15px;color:#555;line-height:1.7;margin:0 0 16px">Ol\u00e1!</p>
+        <p style="font-size:15px;color:#555;line-height:1.7;margin:0 0 16px">
+          Este \u00e9 nosso <strong>\u00faltimo lembrete</strong> sobre a finaliza\u00e7\u00e3o do seu perfil.
+        </p>
+        <p style="font-size:15px;color:#555;line-height:1.7;margin:0 0 16px">
+          Sem um perfil completo, os clientes n\u00e3o conseguem ver suas informa\u00e7\u00f5es
+          e voc\u00ea pode estar perdendo oportunidades de trabalho.
+        </p>
+        <p style="font-size:15px;color:#555;line-height:1.7;margin:0 0 16px">
+          Acesse sua conta agora e complete seu cadastro em poucos minutos!
+        </p>`
+    }
+  ];
+  const idx = Math.min(count, messages.length - 1);
+  return messages[idx];
+}
+
+async function checkOnboardingReminders() {
+  if (!transporter) {
+    console.log('[ONBOARDING REMINDER] SMTP nao configurado. Pulando lembretes.');
+    return;
+  }
+
+  try {
+    const now = new Date().toISOString().replace('T', ' ').replace(/\..+/, '');
+    const cutoff = new Date(Date.now() - MIN_AGE_FOR_REMINDER_MS).toISOString().replace('T', ' ').replace(/\..+/, '');
+    const cooldownCutoff = new Date(Date.now() - COOLDOWN_MS).toISOString().replace('T', ' ').replace(/\..+/, '');
+
+    const rows = db.exec(`
+      SELECT u.id, u.name, u.email, u.createdAt, u.onboardingReminderCount, u.lastOnboardingReminder
+      FROM users u
+      LEFT JOIN onboarding o ON o.userId = u.id
+      WHERE u.role = 'profissional'
+        AND o.userId IS NULL
+        AND u.createdAt < '${cutoff}'
+        AND (u.lastOnboardingReminder IS NULL OR u.lastOnboardingReminder < '${cooldownCutoff}')
+      LIMIT 20
+    `);
+
+    if (!rows.length || !rows[0].values.length) {
+      console.log('[ONBOARDING REMINDER] Nenhum profissional para lembrar.');
+      return;
+    }
+
+    for (const row of rows[0].values) {
+      const userId = row[0];
+      const name = row[1];
+      const email = row[2];
+      const createdAt = row[3];
+      const reminderCount = row[4] || 0;
+
+      const daysSinceReg = createdAt
+        ? Math.floor((Date.now() - new Date(createdAt + 'Z').getTime()) / (1000 * 60 * 60 * 24))
+        : 0;
+
+      const msg = getOnboardingReminderBody(reminderCount, daysSinceReg);
+
+      const emailHtml = onboardingEmailTemplate('&#128640;', 'Complete seu perfil!', msg.body + `
+        <table cellpadding="0" cellspacing="0" style="margin:24px 0 8px">
+          <tr><td align="center">
+            <a href="${APP_URL}" style="display:inline-block;background:linear-gradient(135deg,#38bdf8,#22d3ee);color:#0b1220;text-decoration:none;font-size:15px;font-weight:700;padding:14px 36px;border-radius:12px;box-shadow:0 8px 24px rgba(56,189,248,0.3)">ACESSAR MINHA CONTA</a>
+          </td></tr>
+        </table>
+        <p style="font-size:13px;color:#999;margin:20px 0 0;text-align:center">Se voce ja completou seu perfil, ignore esta mensagem.</p>
+      `);
+
+      try {
+        await sendEmail(email, msg.subject, emailHtml);
+        const newCount = (reminderCount || 0) + 1;
+        db.run(`
+          UPDATE users
+          SET lastOnboardingReminder = '${now}', onboardingReminderCount = ${newCount}
+          WHERE id = ${userId}
+        `);
+        saveDb();
+        console.log(`[ONBOARDING REMINDER] Lembrete #${newCount} enviado para ${name} <${email}>`);
+      } catch (err) {
+        console.error(`[ONBOARDING REMINDER] Erro ao enviar para ${email}:`, err.message);
+      }
+    }
+  } catch (err) {
+    console.error('[ONBOARDING REMINDER] Erro na verificacao:', err.message);
+  }
+}
+
 // ======================== SPA CATCH-ALL ========================
 // Serve index.html for any unmatched route (SPA)
 app.get('*', (req, res) => {
@@ -1006,6 +1186,10 @@ start()
   .then(() => {
     app.listen(PORT, HOST, () => {
       console.log(`Servidor rodando em http://${HOST}:${PORT}`);
+      // Start onboarding reminder scheduler
+      checkOnboardingReminders();
+      setInterval(checkOnboardingReminders, REMINDER_INTERVAL_MS);
+      console.log(`[ONBOARDING REMINDER] Verificação agendada a cada ${REMINDER_INTERVAL_MS / 3600000}h`);
     });
   })
   .catch(err => {

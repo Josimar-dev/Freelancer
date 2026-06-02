@@ -944,6 +944,74 @@ a.btn {
 }
 
 /* Profile info in chat */
+/* Photo preview */
+.photo-preview {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--accent);
+  margin-bottom: 12px;
+  display: none;
+  background: var(--panel-2);
+}
+
+.photo-upload-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.photo-upload-row input {
+  flex: 1;
+}
+
+/* Categories grid */
+.categories-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.cat-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #0b1428;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: .2s;
+  font-size: 13px;
+  color: var(--text);
+  user-select: none;
+}
+
+.cat-check:hover {
+  border-color: var(--accent);
+  background: rgba(56, 189, 248, 0.06);
+}
+
+.cat-check input {
+  accent-color: var(--accent);
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.cat-check.selected {
+  border-color: var(--accent);
+  background: rgba(56, 189, 248, 0.1);
+}
+
+.modal-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
 .profile-info-card {
   background: rgba(17, 24, 39, 0.9);
   border: 1px solid var(--border);
@@ -968,6 +1036,26 @@ a.btn {
 .profile-info-card a {
   color: var(--accent);
   font-size: 13px;
+}
+
+.profile-info-card .prof-photo {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--accent);
+  float: left;
+  margin-right: 12px;
+}
+
+.profile-info-card .tag {
+  display: inline-block;
+  background: rgba(56, 189, 248, 0.12);
+  color: var(--accent);
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  margin: 2px 3px;
 }
 
 @keyframes fadeIn {
@@ -1079,8 +1167,8 @@ a.btn {
     <div class="user-info">
       <span id="userName"></span>
       <span class="badge" id="userRole"></span>
-      <button id="supportChatBtn" class="btn btn-outline btn-sm" style="display:none" onclick="openSupportChatFromHeader()">Suporte</button>
       <a href="https://wa.me/5581991146098" target="_blank" class="btn btn-success btn-sm">WhatsApp</a>
+      <button id="editProfileBtn" class="btn btn-outline btn-sm" style="display:none" onclick="showOnboardingModal(null)">Editar Perfil</button>
       <button class="btn btn-danger btn-sm" onclick="logout()">Sair</button>
     </div>
   </div>
@@ -1204,24 +1292,56 @@ a.btn {
 <!-- Onboarding Modal -->
 <div id="onboardingModal" class="modal-overlay" style="display:none">
   <div class="modal-box">
-    <h2>Complete seu perfil 🚀</h2>
-    <p class="modal-sub">Antes de conversar com o cliente, conte um pouco sobre você para que ele saiba quem é o profissional.</p>
+    <h2>Complete seu perfil profissional</h2>
+    <p class="modal-sub">Preencha seus dados para que os clientes conheçam voce e suas habilidades.</p>
+
+    <div class="photo-upload-row">
+      <img id="onPhotoPreview" class="photo-preview" src="" alt="foto">
+      <input type="text" id="onPhoto" placeholder="URL da foto do perfil (opcional)">
+    </div>
+
     <div class="form-group">
       <label>Sobre você <span class="required">*</span></label>
-      <textarea id="onBio" rows="3" placeholder="Conte um pouco sobre sua experiência, formaçao, áreas de atuaçao..."></textarea>
+      <textarea id="onBio" rows="3" placeholder="Conte um pouco sobre sua experiência, formação, áreas de atuação..."></textarea>
     </div>
+
     <div class="form-group">
       <label>Habilidades & Tecnologias <span class="required">*</span></label>
       <input type="text" id="onSkills" placeholder="Ex: JavaScript, Python, React, Node.js, SQL...">
     </div>
-    <div class="form-group">
-      <label>Portfólio / GitHub</label>
-      <input type="text" id="onPortfolio" placeholder="https://github.com/seu-usuario">
+
+    <div class="modal-row-2">
+      <div class="form-group">
+        <label>Experiência <span class="required">*</span></label>
+        <select id="onExperience">
+          <option value="">Selecione...</option>
+          <option value="<1">Menos de 1 ano</option>
+          <option value="1-2">1 a 2 anos</option>
+          <option value="3-5">3 a 5 anos</option>
+          <option value="5-10">5 a 10 anos</option>
+          <option value="10+">Mais de 10 anos</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Valor por hora (R$)</label>
+        <input type="number" id="onHourlyRate" placeholder="Ex: 50" min="0" step="5">
+      </div>
     </div>
+
     <div class="form-group">
-      <label>LinkedIn</label>
-      <input type="text" id="onLinkedin" placeholder="https://linkedin.com/in/seu-usuario">
+      <label>Categorias de atuação</label>
+      <div class="categories-grid" id="onCategoriesGrid">
+        <label class="cat-check"><input type="checkbox" value="frontend"> Front-end</label>
+        <label class="cat-check"><input type="checkbox" value="backend"> Back-end</label>
+        <label class="cat-check"><input type="checkbox" value="mobile"> Mobile</label>
+        <label class="cat-check"><input type="checkbox" value="fullstack"> Full Stack</label>
+        <label class="cat-check"><input type="checkbox" value="devops"> DevOps</label>
+        <label class="cat-check"><input type="checkbox" value="data"> Data Science</label>
+        <label class="cat-check"><input type="checkbox" value="ui-ux"> UI/UX Design</label>
+        <label class="cat-check"><input type="checkbox" value="qa"> QA / Testes</label>
+      </div>
     </div>
+
     <div class="form-group">
       <label>Disponibilidade <span class="required">*</span></label>
       <select id="onAvailability">
@@ -1233,7 +1353,18 @@ a.btn {
         <option value="evenings">Apenas à noite</option>
       </select>
     </div>
-    <button class="btn btn-primary" onclick="saveOnboarding()">Salvar e continuar</button>
+
+    <div class="form-group">
+      <label>Portfólio / GitHub</label>
+      <input type="text" id="onPortfolio" placeholder="https://github.com/seu-usuario">
+    </div>
+
+    <div class="form-group">
+      <label>LinkedIn</label>
+      <input type="text" id="onLinkedin" placeholder="https://linkedin.com/in/seu-usuario">
+    </div>
+
+    <button class="btn btn-primary" onclick="saveOnboarding()">Salvar perfil</button>
   </div>
 </div>
 
@@ -1430,6 +1561,7 @@ function enterDashboard() {
   const adminTab = document.getElementById('adminTabBtn');
   const chatTabBtn = document.getElementById('chatTabBtn');
   const supportChatBtn = document.getElementById('supportChatBtn');
+  const editProfileBtn = document.getElementById('editProfileBtn');
 
   if (s.role === 'admin') {
     badge.textContent = 'Administrador';
@@ -1438,6 +1570,7 @@ function enterDashboard() {
     adminTab.style.display = 'inline-block';
     chatTabBtn.style.display = 'inline-block';
     supportChatBtn.style.display = 'none';
+    editProfileBtn.style.display = 'none';
     switchTab('admin');
     return;
   }
@@ -1449,6 +1582,8 @@ function enterDashboard() {
   badge.style.background = s.role === 'cliente' ? '#38bdf8' : '#10b981';
 
   supportChatBtn.style.display = 'inline-flex';
+
+  editProfileBtn.style.display = s.role === 'profissional' ? 'inline-flex' : 'none';
 
   createBtn.style.display = (s.role === 'cliente' || s.role === 'profissional') ? 'inline-block' : 'none';
 
@@ -1786,9 +1921,43 @@ async function checkOnboarding(userId) {
   }
 }
 
+function getSelectedCategories() {
+  const checks = document.querySelectorAll('#onCategoriesGrid input[type="checkbox"]:checked');
+  return Array.from(checks).map(c => c.value).join(',');
+}
+
+function setSelectedCategories(csv) {
+  const values = csv ? csv.split(',').map(v => v.trim()) : [];
+  document.querySelectorAll('#onCategoriesGrid input[type="checkbox"]').forEach(c => {
+    c.checked = values.includes(c.value);
+  });
+  updateCatChecks();
+}
+
+function updateCatChecks() {
+  document.querySelectorAll('.cat-check').forEach(el => {
+    const cb = el.querySelector('input');
+    el.classList.toggle('selected', cb.checked);
+  });
+}
+
 function showOnboardingModal(callback) {
   onboardingCallback = callback;
-  document.getElementById('onboardingModal').style.display = 'flex';
+  const modal = document.getElementById('onboardingModal');
+  modal.style.display = 'flex';
+
+  // Reset fields
+  document.getElementById('onBio').value = '';
+  document.getElementById('onSkills').value = '';
+  document.getElementById('onPortfolio').value = '';
+  document.getElementById('onLinkedin').value = '';
+  document.getElementById('onAvailability').value = '';
+  document.getElementById('onExperience').value = '';
+  document.getElementById('onHourlyRate').value = '';
+  document.getElementById('onPhoto').value = '';
+  document.getElementById('onPhotoPreview').style.display = 'none';
+  setSelectedCategories('');
+
   // Pre-fill if data exists
   const s = getSession();
   if (s) {
@@ -1799,6 +1968,15 @@ function showOnboardingModal(callback) {
         document.getElementById('onPortfolio').value = data.portfolio || '';
         document.getElementById('onLinkedin').value = data.linkedin || '';
         document.getElementById('onAvailability').value = data.availability || '';
+        document.getElementById('onExperience').value = data.experience || '';
+        document.getElementById('onHourlyRate').value = data.hourlyRate || '';
+        document.getElementById('onPhoto').value = data.photo || '';
+        if (data.photo) {
+          const prev = document.getElementById('onPhotoPreview');
+          prev.src = data.photo;
+          prev.style.display = 'block';
+        }
+        setSelectedCategories(data.categories || '');
       }
     }).catch(() => {});
   }
@@ -1813,16 +1991,21 @@ async function saveOnboarding() {
   const portfolio = document.getElementById('onPortfolio').value.trim();
   const linkedin = document.getElementById('onLinkedin').value.trim();
   const availability = document.getElementById('onAvailability').value;
+  const experience = document.getElementById('onExperience').value;
+  const hourlyRate = document.getElementById('onHourlyRate').value;
+  const photo = document.getElementById('onPhoto').value.trim();
+  const categories = getSelectedCategories();
 
   if (!bio) return showToast('Conte um pouco sobre voce.', true);
   if (!skills) return showToast('Informe suas habilidades.', true);
+  if (!experience) return showToast('Selecione seu nivel de experiencia.', true);
   if (!availability) return showToast('Selecione sua disponibilidade.', true);
 
   try {
     const res = await fetch(`${API}/onboarding/${s.userId}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ bio, skills, portfolio, linkedin, availability })
+      body: JSON.stringify({ bio, skills, portfolio, linkedin, availability, experience, categories, hourlyRate, photo })
     });
     const data = await res.json();
     if (!res.ok) return showToast(data.error || 'Erro ao salvar.', true);
@@ -1841,6 +2024,20 @@ async function saveOnboarding() {
     showToast('Erro de conexao.', true);
   }
 }
+
+// Live photo preview
+document.addEventListener('input', function(e) {
+  if (e.target.id === 'onPhoto') {
+    const url = e.target.value.trim();
+    const prev = document.getElementById('onPhotoPreview');
+    if (url) {
+      prev.src = url;
+      prev.style.display = 'block';
+    } else {
+      prev.style.display = 'none';
+    }
+  }
+});
 
 // =========================== CHAT ===========================
 let currentChatTaskId = null;
@@ -1972,12 +2169,19 @@ async function loadChatMessages() {
         const profRes = await fetch(`${API}/onboarding/${data.task.professionalId}`);
         const profData = await profRes.json();
         if (profData.completed) {
+          const availLabel = { 'full-time': 'Tempo integral', 'part-time': 'Meio período', 'freelance': 'Freelancer', 'weekends': 'Finais de semana', 'evenings': 'À noite' }[profData.availability] || profData.availability;
+          const expLabel = { '<1': 'Menos de 1 ano', '1-2': '1 a 2 anos', '3-5': '3 a 5 anos', '5-10': '5 a 10 anos', '10+': 'Mais de 10 anos' }[profData.experience] || '';
+          const cats = profData.categories ? profData.categories.split(',').map(c => `<span class="tag">${escHtml(c.trim())}</span>`).join('') : '';
           html += `
             <div class="profile-info-card">
-              <h4>${escHtml(professionalName)} - Perfil</h4>
+              ${profData.photo ? `<img class="prof-photo" src="${escHtml(profData.photo)}" alt="foto" onerror="this.style.display='none'">` : ''}
+              <h4>${escHtml(professionalName)}</h4>
               <p><strong>Sobre:</strong> ${escHtml(profData.bio)}</p>
               <p><strong>Habilidades:</strong> ${escHtml(profData.skills)}</p>
-              <p><strong>Disponibilidade:</strong> ${escHtml(profData.availability)}</p>
+              ${expLabel ? `<p><strong>Experiência:</strong> ${expLabel}</p>` : ''}
+              ${cats ? `<p><strong>Categorias:</strong> ${cats}</p>` : ''}
+              <p><strong>Disponibilidade:</strong> ${availLabel}</p>
+              ${profData.hourlyRate > 0 ? `<p><strong>Valor/hora:</strong> R$ ${Number(profData.hourlyRate).toFixed(2)}</p>` : ''}
               ${profData.portfolio ? `<p><strong>Portfolio:</strong> <a href="${escHtml(profData.portfolio)}" target="_blank">${escHtml(profData.portfolio)}</a></p>` : ''}
               ${profData.linkedin ? `<p><strong>LinkedIn:</strong> <a href="${escHtml(profData.linkedin)}" target="_blank">${escHtml(profData.linkedin)}</a></p>` : ''}
             </div>
